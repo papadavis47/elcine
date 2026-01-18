@@ -9,6 +9,7 @@ pub struct TmdbSearchResponse {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct TmdbMovie {
     pub id: i64,
     pub title: String,

@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "elcine",
-        "width": 1600,
-        "height": 1000,
+        "width": 2000,
+        "height": 1250,
         "resizable": true
       }
     ],
