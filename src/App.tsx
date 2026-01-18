@@ -38,6 +38,27 @@ function App() {
     fetchMovies();
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput = activeEl instanceof HTMLInputElement ||
+                      activeEl instanceof HTMLTextAreaElement ||
+                      activeEl?.getAttribute("contenteditable") === "true";
+      
+      if (isInput) return;
+
+      const scrollAmount = 100;
+      if (e.key === "j") {
+        window.scrollBy({ top: scrollAmount, behavior: "smooth" });
+      } else if (e.key === "k") {
+        window.scrollBy({ top: -scrollAmount, behavior: "smooth" });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const handleSave = async (data: CreateMovie | UpdateMovie) => {
     try {
       if ("id" in data) {

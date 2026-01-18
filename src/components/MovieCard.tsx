@@ -1,6 +1,8 @@
+import { useRef, useState, useEffect } from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Movie, getPosterSrc } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +20,15 @@ const formatColors = {
 
 export function MovieCard({ movie, onEdit, onDelete }: MovieCardProps) {
   const posterSrc = getPosterSrc(movie.poster_path);
+  const notesRef = useRef<HTMLParagraphElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const el = notesRef.current;
+    if (el) {
+      setIsTruncated(el.scrollHeight > el.clientHeight);
+    }
+  }, [movie.notes]);
 
   return (
     <Card className="flex flex-col overflow-hidden">
@@ -75,9 +86,28 @@ export function MovieCard({ movie, onEdit, onDelete }: MovieCardProps) {
       </CardHeader>
       <CardContent className="flex-1 pb-2">
         {movie.notes && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {movie.notes}
-          </p>
+          isTruncated ? (
+            <HoverCard openDelay={200} closeDelay={100}>
+              <HoverCardTrigger asChild>
+                <p
+                  ref={notesRef}
+                  className="text-sm text-muted-foreground line-clamp-2 cursor-pointer"
+                >
+                  {movie.notes}
+                </p>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-80">
+                <p className="text-sm">{movie.notes}</p>
+              </HoverCardContent>
+            </HoverCard>
+          ) : (
+            <p
+              ref={notesRef}
+              className="text-sm text-muted-foreground line-clamp-2"
+            >
+              {movie.notes}
+            </p>
+          )
         )}
       </CardContent>
       <CardFooter className="gap-2 pt-0">
