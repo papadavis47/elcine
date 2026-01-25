@@ -1,8 +1,17 @@
 import { useRef, useState, useEffect } from "react";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { Movie, getPosterSrc } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +41,7 @@ export function MovieCard({ movie, onEdit, onDelete }: MovieCardProps) {
 
   return (
     <Card className="flex flex-col overflow-hidden">
-      <div className="relative aspect-[2/3] bg-muted">
+      <div className="relative aspect-2/3 bg-muted">
         {posterSrc ? (
           <img
             src={posterSrc}
@@ -78,15 +87,17 @@ export function MovieCard({ movie, onEdit, onDelete }: MovieCardProps) {
           <h3 className="font-semibold leading-tight line-clamp-2">
             {movie.title}
           </h3>
-          <Badge className={cn("shrink-0 text-white", formatColors[movie.format])}>
+          <Badge
+            className={cn("shrink-0 text-white", formatColors[movie.format])}
+          >
             {movie.format}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">{movie.director}</p>
       </CardHeader>
       <CardContent className="flex-1 pb-2">
-        {movie.notes && (
-          isTruncated ? (
+        {movie.notes &&
+          (isTruncated ? (
             <HoverCard openDelay={200} closeDelay={100}>
               <HoverCardTrigger asChild>
                 <p
@@ -107,8 +118,7 @@ export function MovieCard({ movie, onEdit, onDelete }: MovieCardProps) {
             >
               {movie.notes}
             </p>
-          )
-        )}
+          ))}
       </CardContent>
       <CardFooter className="gap-2 pt-0">
         <Button
