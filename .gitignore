@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# TypeScript build output (tsc --build)
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
 # Editor directories and files
 .vscode/*
 .idea
