@@ -107,3 +107,67 @@ pub async fn download_poster(
 
     Ok(local_path.to_string_lossy().to_string())
 }
+
+/// Network tests. These hit the real TMDB API, so they are `#[ignore]`d and do
+/// not run under a plain `cargo test`. They need `src-tauri/.env` to hold a
+/// valid `TMDB_API_KEY`, plus internet access.
+///
+///     cargo test -- --ignored
+#[cfg(test)]
+mod network_tests {
+    use super::*;
+
+    /// Exercises the raw transport both TMDB calls depend on: TLS handshake
+    /// against each host, then the JSON and byte body paths. Needs no API key,
+    /// so this one still tells you something when the key is missing.
+    #[tokio::test]
+    #[ignore = "hits the network"]
+    async fn https_transport_to_tmdb_hosts() {
+        let resp = reqwest::get(
+            "https://api.themoviedb.org/3/search/movie?api_key=invalid&query=stalker",
+        )
+        .await
+        .expect("TLS handshake / request to api.themoviedb.org failed");
+
+        let status = resp.status();
+        assert!(
+            status.is_client_error() || status.is_success(),
+            "unexpected status from api.themoviedb.org: {status}"
+        );
+
+        let body: serde_json::Value = resp.json().await.expect(".json() decode failed");
+        assert!(
+            body.get("status_message").is_some() || body.get("results").is_some(),
+            "unexpected body shape: {body}"
+        );
+
+        // The byte path used by download_poster.
+        let img = reqwest::get("https://image.tmdb.org/t/p/w342/qJ2tW6WMUDux911r6m7haRef0WH.jpg")
+            .await
+            .expect("TLS handshake / request to image.tmdb.org failed");
+        assert!(img.status().is_success(), "image CDN returned {}", img.status());
+
+        let bytes = img.bytes().await.expect(".bytes() failed");
+        assert!(!bytes.is_empty(), "empty body from image CDN");
+    }
+
+    /// The real thing: authenticated search plus the crew lookup that backs
+    /// director auto-fill.
+    #[tokio::test]
+    #[ignore = "hits the network, needs TMDB_API_KEY"]
+    async fn search_then_credits() {
+        let movie = search_movie("Stalker")
+            .await
+            .expect("search_movie failed")
+            .expect("no results for 'Stalker'");
+
+        assert!(movie.id > 0);
+        assert!(!movie.title.is_empty());
+
+        let director = get_movie_credits(movie.id)
+            .await
+            .expect("get_movie_credits failed");
+
+        assert!(director.is_some(), "no Director found in crew for {}", movie.title);
+    }
+}

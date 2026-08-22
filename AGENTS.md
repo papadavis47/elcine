@@ -27,6 +27,10 @@ pnpm tauri build      # Build Tauri desktop application
 
 # Preview
 pnpm preview          # Preview production build
+
+# Test (Rust; run from src-tauri/)
+cargo test            # db layer, hermetic
+cargo test -- --ignored   # + TMDB network tests, needs .env key and internet
 ```
 
 ## Project Structure
