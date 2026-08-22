@@ -78,8 +78,8 @@ CREATE TABLE movies (
 
 ## Data Storage
 
-- **Database**: `~/.local/share/elcine/elcine.db`
-- **Posters**: `~/.local/share/elcine/posters/` (cached from TMDB at w342 size)
+- **Database**: `~/.local/share/com.papa.elcine/elcine.db` (Linux). Path comes from Tauri's `app_data_dir()`, which uses the bundle **identifier** in `tauri.conf.json`, not `productName`.
+- **Posters**: `~/.local/share/com.papa.elcine/posters/` (cached from TMDB at w342 size)
 
 ## Environment Variables
 
