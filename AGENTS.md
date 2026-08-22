@@ -8,7 +8,7 @@
 
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4
 - **UI Components**: shadcn/ui (New York style)
-- **Build Tool**: Vite 7
+- **Build Tool**: Vite 8
 - **Desktop Runtime**: Tauri 2
 - **Database**: Turso (embedded SQLite-compatible, local only)
 - **External API**: TMDB for movie search, director lookup, and poster images
@@ -57,8 +57,7 @@ pnpm preview          # Preview production build
 │   ├── .env                # TMDB_API_KEY (gitignored)
 │   ├── Cargo.toml          # Rust dependencies
 │   └── tauri.conf.json     # Tauri configuration
-├── components.json         # shadcn/ui configuration
-└── tailwind.config.ts      # Tailwind configuration
+└── components.json         # shadcn/ui configuration (Tailwind v4: theme lives in src/App.css)
 ```
 
 ## Database Schema
