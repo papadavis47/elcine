@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 
 import { SortOption, SORT_OPTIONS } from "@/lib/sort";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export type FormatFilter = "all" | "DVD" | "Digital" | "Blu-ray";
 
@@ -79,6 +80,8 @@ export function SortControls({
           Favorites only
         </Label>
       </div>
+
+      <ThemeToggle />
     </div>
   );
 }
