@@ -93,7 +93,14 @@ export function MovieCard({ movie, onEdit, onDelete }: MovieCardProps) {
             {movie.format}
           </Badge>
         </div>
-        <p className="text-sm text-muted-foreground">{movie.director}</p>
+        <p className="text-sm text-muted-foreground">
+          {movie.director}
+          {movie.release_year !== null && (
+            <span className={cn("tabular-nums", movie.director && "ml-2")}>
+              {movie.release_year}
+            </span>
+          )}
+        </p>
       </CardHeader>
       <CardContent className="flex-1 pb-2">
         {movie.notes &&

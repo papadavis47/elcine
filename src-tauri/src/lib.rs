@@ -29,6 +29,7 @@ pub fn run() {
             commands::delete_movie,
             commands::get_movies,
             commands::get_movie,
+            commands::backfill_release_years,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

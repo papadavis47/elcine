@@ -11,6 +11,7 @@ pub struct Movie {
     pub tmdb_id: Option<i64>,
     pub poster_path: Option<String>,
     pub created_at: String,
+    pub release_year: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -20,6 +21,7 @@ pub struct CreateMovie {
     pub notes: Option<String>,
     pub is_favorite: bool,
     pub format: String,
+    pub release_year: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,4 +32,5 @@ pub struct UpdateMovie {
     pub notes: Option<String>,
     pub is_favorite: bool,
     pub format: String,
+    pub release_year: Option<i64>,
 }

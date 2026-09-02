@@ -26,10 +26,18 @@ export function MovieForm({ movie, onSubmit, onCancel }: MovieFormProps) {
   const [director, setDirector] = useState(movie?.director ?? "");
   const [notes, setNotes] = useState(movie?.notes ?? "");
   const [format, setFormat] = useState<Format>(movie?.format ?? "DVD");
+  const [releaseYear, setReleaseYear] = useState(
+    movie?.release_year !== null && movie?.release_year !== undefined
+      ? String(movie.release_year)
+      : ""
+  );
   const [isFavorite, setIsFavorite] = useState(movie?.is_favorite ?? false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const parsedYear = parseInt(releaseYear, 10);
+    const release_year = Number.isNaN(parsedYear) ? null : parsedYear;
 
     if (movie) {
       const updateData: UpdateMovie = {
@@ -39,6 +47,7 @@ export function MovieForm({ movie, onSubmit, onCancel }: MovieFormProps) {
         notes: notes || null,
         is_favorite: isFavorite,
         format,
+        release_year,
       };
       onSubmit(updateData);
     } else {
@@ -48,6 +57,7 @@ export function MovieForm({ movie, onSubmit, onCancel }: MovieFormProps) {
         notes: notes || null,
         is_favorite: isFavorite,
         format,
+        release_year,
       };
       onSubmit(createData);
     }
@@ -72,6 +82,20 @@ export function MovieForm({ movie, onSubmit, onCancel }: MovieFormProps) {
           id="director"
           value={director}
           onChange={(e) => setDirector(e.target.value)}
+          placeholder="Will be fetched from TMDB if empty"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="release-year">Year</Label>
+        <Input
+          id="release-year"
+          type="number"
+          inputMode="numeric"
+          min={1888}
+          max={2100}
+          value={releaseYear}
+          onChange={(e) => setReleaseYear(e.target.value)}
           placeholder="Will be fetched from TMDB if empty"
         />
       </div>

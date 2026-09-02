@@ -8,13 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type SortOption =
-  | "title-asc"
-  | "title-desc"
-  | "director-asc"
-  | "director-desc"
-  | "newest"
-  | "oldest";
+import { SortOption, SORT_OPTIONS } from "@/lib/sort";
 
 export type FormatFilter = "all" | "DVD" | "Digital" | "Blu-ray";
 
@@ -42,16 +36,15 @@ export function SortControls({
           Sort by
         </Label>
         <Select value={sortBy} onValueChange={(v) => onSortChange(v as SortOption)}>
-          <SelectTrigger id="sort" className="w-40">
+          <SelectTrigger id="sort" className="w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="title-asc">Title (A-Z)</SelectItem>
-            <SelectItem value="title-desc">Title (Z-A)</SelectItem>
-            <SelectItem value="director-asc">Director (A-Z)</SelectItem>
-            <SelectItem value="director-desc">Director (Z-A)</SelectItem>
-            <SelectItem value="newest">Newest</SelectItem>
-            <SelectItem value="oldest">Oldest</SelectItem>
+            {SORT_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

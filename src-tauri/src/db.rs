@@ -13,9 +13,23 @@ const CREATE_MOVIES_TABLE: &str = r#"
         format TEXT NOT NULL,
         tmdb_id INTEGER,
         poster_path TEXT,
-        created_at TEXT DEFAULT (datetime('now'))
+        created_at TEXT DEFAULT (datetime('now')),
+        release_year INTEGER
     )
 "#;
+
+const ADD_RELEASE_YEAR: &str = "ALTER TABLE movies ADD COLUMN release_year INTEGER";
+
+/// Brings a database created by an older build up to the current schema.
+/// `ADD COLUMN` has no `IF NOT EXISTS`, so a duplicate-column complaint just
+/// means this migration already ran.
+pub async fn migrate(conn: &Connection) -> Result<(), String> {
+    match conn.execute(ADD_RELEASE_YEAR, ()).await {
+        Ok(_) => Ok(()),
+        Err(e) if e.to_string().to_lowercase().contains("duplicate column") => Ok(()),
+        Err(e) => Err(e.to_string()),
+    }
+}
 
 pub async fn init_db(app_handle: &AppHandle) -> Result<Database, String> {
     let app_data_dir = app_handle
@@ -39,6 +53,8 @@ pub async fn init_db(app_handle: &AppHandle) -> Result<Database, String> {
         .await
         .map_err(|e| e.to_string())?;
 
+    migrate(&conn).await?;
+
     Ok(db)
 }
 
@@ -52,11 +68,15 @@ pub async fn insert_movie(
     let notes = movie_data.notes.unwrap_or_default();
     let poster = poster_path.unwrap_or_default();
     let tmdb_str = tmdb_id.map(|id| id.to_string()).unwrap_or_default();
+    let year_str = movie_data
+        .release_year
+        .map(|y| y.to_string())
+        .unwrap_or_default();
 
     conn.execute(
         r#"
-        INSERT INTO movies (title, director, notes, is_favorite, format, tmdb_id, poster_path)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+        INSERT INTO movies (title, director, notes, is_favorite, format, tmdb_id, poster_path, release_year)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
         "#,
         [
             movie_data.title.as_str(),
@@ -66,6 +86,7 @@ pub async fn insert_movie(
             movie_data.format.as_str(),
             tmdb_str.as_str(),
             poster.as_str(),
+            year_str.as_str(),
         ],
     )
     .await
@@ -88,12 +109,16 @@ pub async fn insert_movie(
 pub async fn update_movie(conn: &Connection, update_data: UpdateMovie) -> Result<Movie, String> {
     let notes = update_data.notes.unwrap_or_default();
     let id_str = update_data.id.to_string();
+    let year_str = update_data
+        .release_year
+        .map(|y| y.to_string())
+        .unwrap_or_default();
 
     conn.execute(
         r#"
         UPDATE movies
-        SET title = ?1, director = ?2, notes = ?3, is_favorite = ?4, format = ?5
-        WHERE id = ?6
+        SET title = ?1, director = ?2, notes = ?3, is_favorite = ?4, format = ?5, release_year = ?6
+        WHERE id = ?7
         "#,
         [
             update_data.title.as_str(),
@@ -101,6 +126,7 @@ pub async fn update_movie(conn: &Connection, update_data: UpdateMovie) -> Result
             notes.as_str(),
             if update_data.is_favorite { "1" } else { "0" },
             update_data.format.as_str(),
+            year_str.as_str(),
             id_str.as_str(),
         ],
     )
@@ -108,6 +134,20 @@ pub async fn update_movie(conn: &Connection, update_data: UpdateMovie) -> Result
     .map_err(|e| e.to_string())?;
 
     get_movie(conn, update_data.id).await
+}
+
+/// Used by the TMDB backfill, which fills in only this one column and must
+/// leave the rest of the row alone.
+pub async fn set_release_year(conn: &Connection, id: i64, year: i64) -> Result<(), String> {
+    let year_str = year.to_string();
+    let id_str = id.to_string();
+    conn.execute(
+        "UPDATE movies SET release_year = ?1 WHERE id = ?2",
+        [year_str.as_str(), id_str.as_str()],
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 pub async fn delete_movie(conn: &Connection, id: i64) -> Result<(), String> {
@@ -158,6 +198,7 @@ fn row_to_movie(row: &turso::Row) -> Result<Movie, String> {
     let tmdb_id = row.get_value(6).map_err(|e| e.to_string())?;
     let poster_path = row.get_value(7).map_err(|e| e.to_string())?;
     let created_at = row.get_value(8).map_err(|e| e.to_string())?;
+    let release_year = row.get_value(9).map_err(|e| e.to_string())?;
 
     Ok(Movie {
         id: match id {
@@ -197,6 +238,11 @@ fn row_to_movie(row: &turso::Row) -> Result<Movie, String> {
         created_at: match created_at {
             Value::Text(t) => t,
             _ => return Err("Invalid created_at".to_string()),
+        },
+        release_year: match release_year {
+            Value::Integer(i) => Some(i),
+            Value::Text(t) if !t.is_empty() => t.parse().ok(),
+            _ => None,
         },
     })
 }
@@ -240,6 +286,7 @@ mod tests {
             notes: Some("zone".into()),
             is_favorite: true,
             format: "Blu-ray".into(),
+            release_year: Some(1979),
         }
     }
 
@@ -259,6 +306,7 @@ mod tests {
         assert_eq!(created.format, "Blu-ray");
         assert_eq!(created.tmdb_id, Some(1398));
         assert_eq!(created.poster_path.as_deref(), Some("posters/1398.jpg"));
+        assert_eq!(created.release_year, Some(1979));
         assert!(!created.created_at.is_empty(), "created_at default not applied");
     }
 
@@ -276,6 +324,7 @@ mod tests {
                 notes: None,
                 is_favorite: false,
                 format: "DVD".into(),
+                release_year: None,
             },
             None,
             None,
@@ -287,6 +336,7 @@ mod tests {
         assert_eq!(created.notes, None);
         assert_eq!(created.tmdb_id, None);
         assert_eq!(created.poster_path, None);
+        assert_eq!(created.release_year, None);
         assert!(!created.is_favorite);
     }
 
@@ -307,6 +357,7 @@ mod tests {
                 notes: None,
                 is_favorite: false,
                 format: "DVD".into(),
+                release_year: Some(1972),
             },
         )
         .await
@@ -316,10 +367,92 @@ mod tests {
         assert_eq!(updated.notes, None);
         assert!(!updated.is_favorite);
         assert_eq!(updated.format, "DVD");
+        assert_eq!(updated.release_year, Some(1972));
         // UPDATE never names these columns, so they must survive untouched.
         assert_eq!(updated.tmdb_id, Some(1398));
         assert_eq!(updated.poster_path.as_deref(), Some("posters/1398.jpg"));
         assert_eq!(updated.created_at, created.created_at);
+    }
+
+    /// The backfill path: an existing row with no year picks one up without
+    /// disturbing any other column.
+    #[tokio::test]
+    async fn set_release_year_fills_only_that_column() {
+        let t = temp_db("backfill").await;
+
+        let created = insert_movie(
+            &t.conn,
+            CreateMovie {
+                title: "Stalker".into(),
+                director: Some("Andrei Tarkovsky".into()),
+                notes: Some("zone".into()),
+                is_favorite: true,
+                format: "Blu-ray".into(),
+                release_year: None,
+            },
+            Some(1398),
+            Some("posters/1398.jpg".into()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(created.release_year, None);
+
+        set_release_year(&t.conn, created.id, 1979)
+            .await
+            .expect("set_release_year failed");
+
+        let after = get_movie(&t.conn, created.id).await.unwrap();
+        assert_eq!(after.release_year, Some(1979));
+        assert_eq!(after.title, "Stalker");
+        assert_eq!(after.notes.as_deref(), Some("zone"));
+        assert!(after.is_favorite);
+        assert_eq!(after.tmdb_id, Some(1398));
+        assert_eq!(after.poster_path.as_deref(), Some("posters/1398.jpg"));
+    }
+
+    /// A database written by a build that predates `release_year` has to gain
+    /// the column on open, and rows already in it read back as `None`.
+    #[tokio::test]
+    async fn migrate_upgrades_a_pre_release_year_database() {
+        const LEGACY_SCHEMA: &str = "
+            CREATE TABLE IF NOT EXISTS movies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                director TEXT NOT NULL,
+                notes TEXT,
+                is_favorite INTEGER DEFAULT 0,
+                format TEXT NOT NULL,
+                tmdb_id INTEGER,
+                poster_path TEXT,
+                created_at TEXT DEFAULT (datetime('now'))
+            )";
+
+        let dir = std::env::temp_dir().join(format!("elcine-test-legacy-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("elcine.db").to_string_lossy().to_string();
+
+        let db = Builder::new_local(&path).build().await.unwrap();
+        let conn = db.connect().unwrap();
+        conn.execute(LEGACY_SCHEMA, ()).await.unwrap();
+        conn.execute(
+            "INSERT INTO movies (title, director, format) VALUES ('Stalker', 'Tarkovsky', 'DVD')",
+            (),
+        )
+        .await
+        .unwrap();
+
+        migrate(&conn).await.expect("migrate failed on legacy schema");
+        // Opening the same database twice must not fail on the duplicate column.
+        migrate(&conn).await.expect("migrate is not idempotent");
+
+        let movies = get_all_movies(&conn).await.expect("read after migrate failed");
+        assert_eq!(movies.len(), 1);
+        assert_eq!(movies[0].release_year, None);
+
+        drop(conn);
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[tokio::test]
@@ -337,6 +470,7 @@ mod tests {
                 notes: None,
                 is_favorite: false,
                 format: "Digital".into(),
+                release_year: Some(1975),
             },
             None,
             None,

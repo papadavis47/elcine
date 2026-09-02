@@ -14,9 +14,15 @@ pub async fn add_movie(
     let mut tmdb_id: Option<i64> = None;
     let mut poster_path: Option<String> = None;
     let mut director = movie.director.clone();
+    // A year typed into the form wins; TMDB only fills the gap.
+    let mut release_year = movie.release_year;
 
     if let Ok(Some(tmdb_movie)) = tmdb::search_movie(&movie.title).await {
         tmdb_id = Some(tmdb_movie.id);
+
+        if release_year.is_none() {
+            release_year = tmdb::year_from_release_date(tmdb_movie.release_date.as_deref());
+        }
 
         if director.is_none() {
             if let Ok(Some(dir)) = tmdb::get_movie_credits(tmdb_movie.id).await {
@@ -37,6 +43,7 @@ pub async fn add_movie(
         notes: movie.notes,
         is_favorite: movie.is_favorite,
         format: movie.format,
+        release_year,
     };
 
     let conn = state.db.connect().map_err(|e| e.to_string())?;
@@ -62,6 +69,34 @@ pub async fn delete_movie(state: State<'_, AppState>, id: i64) -> Result<(), Str
 pub async fn get_movies(state: State<'_, AppState>) -> Result<Vec<Movie>, String> {
     let conn = state.db.connect().map_err(|e| e.to_string())?;
     db::get_all_movies(&conn).await
+}
+
+/// Fills in `release_year` for movies added before the field existed. Runs on
+/// app start; a film TMDB can't answer for is left alone and simply retried on
+/// the next launch. Returns how many rows it filled.
+#[tauri::command]
+pub async fn backfill_release_years(state: State<'_, AppState>) -> Result<usize, String> {
+    let conn = state.db.connect().map_err(|e| e.to_string())?;
+    let movies = db::get_all_movies(&conn).await?;
+
+    let mut filled = 0;
+    for movie in movies {
+        if movie.release_year.is_some() {
+            continue;
+        }
+        let Some(tmdb_id) = movie.tmdb_id else {
+            continue;
+        };
+        let Ok(details) = tmdb::get_movie_details(tmdb_id).await else {
+            continue;
+        };
+        if let Some(year) = tmdb::year_from_release_date(details.release_date.as_deref()) {
+            db::set_release_year(&conn, movie.id, year).await?;
+            filled += 1;
+        }
+    }
+
+    Ok(filled)
 }
 
 #[tauri::command]

@@ -11,6 +11,7 @@ export interface Movie {
   tmdb_id: number | null;
   poster_path: string | null;
   created_at: string;
+  release_year: number | null;
 }
 
 export interface CreateMovie {
@@ -19,6 +20,7 @@ export interface CreateMovie {
   notes: string | null;
   is_favorite: boolean;
   format: "DVD" | "Digital" | "Blu-ray";
+  release_year: number | null;
 }
 
 export interface UpdateMovie {
@@ -28,6 +30,7 @@ export interface UpdateMovie {
   notes: string | null;
   is_favorite: boolean;
   format: "DVD" | "Digital" | "Blu-ray";
+  release_year: number | null;
 }
 
 export async function getMovies(): Promise<Movie[]> {
@@ -48,6 +51,12 @@ export async function updateMovie(movie: UpdateMovie): Promise<Movie> {
 
 export async function deleteMovie(id: number): Promise<void> {
   return invoke("delete_movie", { id });
+}
+
+/// Fills in release years for movies added before the field existed.
+/// Resolves with the number of movies it filled.
+export async function backfillReleaseYears(): Promise<number> {
+  return invoke("backfill_release_years");
 }
 
 export function getPosterSrc(posterPath: string | null): string | null {

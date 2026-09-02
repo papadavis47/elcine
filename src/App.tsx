@@ -3,7 +3,8 @@ import "./App.css";
 import { Button } from "@/components/ui/button";
 import { MovieGrid } from "@/components/MovieGrid";
 import { MovieDialog } from "@/components/MovieDialog";
-import { SortControls, SortOption, FormatFilter } from "@/components/SortControls";
+import { SortControls, FormatFilter } from "@/components/SortControls";
+import { SortOption, compareMovies, loadSort, saveSort } from "@/lib/sort";
 import {
   Movie,
   CreateMovie,
@@ -12,12 +13,13 @@ import {
   addMovie,
   updateMovie,
   deleteMovie,
+  backfillReleaseYears,
 } from "@/lib/tauri";
 
 function App() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<SortOption>("title-asc");
+  const [sortBy, setSortBy] = useState<SortOption>(loadSort);
   const [filterFormat, setFilterFormat] = useState<FormatFilter>("all");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -37,6 +39,21 @@ function App() {
   useEffect(() => {
     fetchMovies();
   }, []);
+
+  // Movies added before release years were stored have none. Fill them in once
+  // per launch; offline just means they fill in on a later run.
+  useEffect(() => {
+    backfillReleaseYears()
+      .then((filled) => {
+        if (filled > 0) fetchMovies();
+      })
+      .catch((error) => console.error("Failed to backfill release years:", error));
+  }, []);
+
+  const handleSortChange = (sort: SortOption) => {
+    setSortBy(sort);
+    saveSort(sort);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -100,24 +117,7 @@ function App() {
       if (favoritesOnly && !movie.is_favorite) return false;
       return true;
     })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "title-asc":
-          return a.title.localeCompare(b.title);
-        case "title-desc":
-          return b.title.localeCompare(a.title);
-        case "director-asc":
-          return a.director.localeCompare(b.director);
-        case "director-desc":
-          return b.director.localeCompare(a.director);
-        case "newest":
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case "oldest":
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        default:
-          return 0;
-      }
-    });
+    .sort((a, b) => compareMovies(a, b, sortBy));
 
   return (
     <main className="min-h-screen bg-background p-6">
@@ -135,7 +135,7 @@ function App() {
 
         <SortControls
           sortBy={sortBy}
-          onSortChange={setSortBy}
+          onSortChange={handleSortChange}
           filterFormat={filterFormat}
           onFilterFormatChange={setFilterFormat}
           favoritesOnly={favoritesOnly}

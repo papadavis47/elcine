@@ -14,6 +14,13 @@ pub struct TmdbMovie {
     pub id: i64,
     pub title: String,
     pub poster_path: Option<String>,
+    pub release_date: Option<String>,
+}
+
+/// TMDB reports release dates as `YYYY-MM-DD`, but leaves them null or empty
+/// for films it has no date for.
+pub fn year_from_release_date(release_date: Option<&str>) -> Option<i64> {
+    release_date?.get(..4)?.parse().ok()
 }
 
 #[derive(Debug, Deserialize)]
@@ -73,6 +80,23 @@ pub async fn get_movie_credits(tmdb_id: i64) -> Result<Option<String>, String> {
     Ok(director)
 }
 
+/// Looks a film up by its TMDB id rather than its title. The backfill already
+/// knows the id, so it must not go back through the fuzzy title search.
+pub async fn get_movie_details(tmdb_id: i64) -> Result<TmdbMovie, String> {
+    let api_key = get_api_key()?;
+    let url = format!(
+        "https://api.themoviedb.org/3/movie/{}?api_key={}",
+        tmdb_id, api_key
+    );
+
+    reqwest::get(&url)
+        .await
+        .map_err(|e| e.to_string())?
+        .json()
+        .await
+        .map_err(|e| e.to_string())
+}
+
 pub async fn download_poster(
     app_handle: &AppHandle,
     poster_path: &str,
@@ -106,6 +130,21 @@ pub async fn download_poster(
     file.write_all(&bytes).await.map_err(|e| e.to_string())?;
 
     Ok(local_path.to_string_lossy().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn year_parsing_handles_every_shape_tmdb_returns() {
+        assert_eq!(year_from_release_date(Some("1979-05-25")), Some(1979));
+        assert_eq!(year_from_release_date(Some("1979")), Some(1979));
+        assert_eq!(year_from_release_date(None), None);
+        assert_eq!(year_from_release_date(Some("")), None);
+        assert_eq!(year_from_release_date(Some("197")), None);
+        assert_eq!(year_from_release_date(Some("not-a-date")), None);
+    }
 }
 
 /// Network tests. These hit the real TMDB API, so they are `#[ignore]`d and do
