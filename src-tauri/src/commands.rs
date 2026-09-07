@@ -50,13 +50,54 @@ pub async fn add_movie(
     db::insert_movie(&conn, movie_data, tmdb_id, poster_path).await
 }
 
+/// Every edit re-resolves the movie against TMDB by its (possibly just-edited)
+/// title and overwrites tmdb_id/director/release_year/poster with the fresh
+/// response, so a bad initial match or stale poster gets corrected on save.
+/// A failed/empty lookup leaves those fields untouched rather than wiping them.
 #[tauri::command]
 pub async fn update_movie(
+    app_handle: AppHandle,
     state: State<'_, AppState>,
     movie: UpdateMovie,
 ) -> Result<Movie, String> {
     let conn = state.db.connect().map_err(|e| e.to_string())?;
-    db::update_movie(&conn, movie).await
+    let existing = db::get_movie(&conn, movie.id).await?;
+
+    let mut tmdb_id = existing.tmdb_id;
+    let mut director = movie.director.clone();
+    let mut release_year = movie.release_year;
+    let mut poster_path = existing.poster_path.clone();
+
+    if let Ok(Some(tmdb_movie)) = tmdb::search_movie(&movie.title).await {
+        tmdb_id = Some(tmdb_movie.id);
+        release_year = tmdb::year_from_release_date(tmdb_movie.release_date.as_deref());
+
+        if let Ok(Some(dir)) = tmdb::get_movie_credits(tmdb_movie.id).await {
+            director = dir;
+        }
+
+        let mut new_poster_path = None;
+        if let Some(ref path) = tmdb_movie.poster_path {
+            if let Ok(local_path) = tmdb::download_poster(&app_handle, path, tmdb_movie.id).await {
+                new_poster_path = Some(local_path);
+            }
+        }
+
+        if let Some(old_path) = &existing.poster_path {
+            if new_poster_path.as_ref() != Some(old_path) {
+                let _ = std::fs::remove_file(old_path);
+            }
+        }
+        poster_path = new_poster_path;
+    }
+
+    let update_data = UpdateMovie {
+        director,
+        release_year,
+        ..movie
+    };
+
+    db::update_movie(&conn, update_data, tmdb_id, poster_path).await
 }
 
 #[tauri::command]

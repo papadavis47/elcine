@@ -106,19 +106,26 @@ pub async fn insert_movie(
     row_to_movie(&row)
 }
 
-pub async fn update_movie(conn: &Connection, update_data: UpdateMovie) -> Result<Movie, String> {
+pub async fn update_movie(
+    conn: &Connection,
+    update_data: UpdateMovie,
+    tmdb_id: Option<i64>,
+    poster_path: Option<String>,
+) -> Result<Movie, String> {
     let notes = update_data.notes.unwrap_or_default();
     let id_str = update_data.id.to_string();
     let year_str = update_data
         .release_year
         .map(|y| y.to_string())
         .unwrap_or_default();
+    let tmdb_str = tmdb_id.map(|id| id.to_string()).unwrap_or_default();
+    let poster = poster_path.unwrap_or_default();
 
     conn.execute(
         r#"
         UPDATE movies
-        SET title = ?1, director = ?2, notes = ?3, is_favorite = ?4, format = ?5, release_year = ?6
-        WHERE id = ?7
+        SET title = ?1, director = ?2, notes = ?3, is_favorite = ?4, format = ?5, release_year = ?6, tmdb_id = ?7, poster_path = ?8
+        WHERE id = ?9
         "#,
         [
             update_data.title.as_str(),
@@ -127,6 +134,8 @@ pub async fn update_movie(conn: &Connection, update_data: UpdateMovie) -> Result
             if update_data.is_favorite { "1" } else { "0" },
             update_data.format.as_str(),
             year_str.as_str(),
+            tmdb_str.as_str(),
+            poster.as_str(),
             id_str.as_str(),
         ],
     )
@@ -341,7 +350,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn update_preserves_fields_it_does_not_touch() {
+    async fn update_overwrites_tmdb_fields_with_the_values_passed_in() {
         let t = temp_db("update").await;
 
         let created = insert_movie(&t.conn, sample(), Some(1398), Some("posters/1398.jpg".into()))
@@ -359,6 +368,8 @@ mod tests {
                 format: "DVD".into(),
                 release_year: Some(1972),
             },
+            Some(423),
+            Some("posters/423.jpg".into()),
         )
         .await
         .expect("update_movie failed");
@@ -368,9 +379,8 @@ mod tests {
         assert!(!updated.is_favorite);
         assert_eq!(updated.format, "DVD");
         assert_eq!(updated.release_year, Some(1972));
-        // UPDATE never names these columns, so they must survive untouched.
-        assert_eq!(updated.tmdb_id, Some(1398));
-        assert_eq!(updated.poster_path.as_deref(), Some("posters/1398.jpg"));
+        assert_eq!(updated.tmdb_id, Some(423));
+        assert_eq!(updated.poster_path.as_deref(), Some("posters/423.jpg"));
         assert_eq!(updated.created_at, created.created_at);
     }
 
