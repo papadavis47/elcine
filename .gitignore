@@ -18,7 +18,7 @@ vite.config.js
 vite.config.d.ts
 
 # Editor directories and files
-.vscode/*
+.zed/*
 .idea
 .DS_Store
 *.suo
@@ -31,3 +31,6 @@ vite.config.d.ts
 .env
 .env.*
 src-tauri/.env
+
+# For notes and learning
+learning/
