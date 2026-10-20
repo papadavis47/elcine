@@ -1,7 +1,7 @@
 use tauri::{AppHandle, Manager};
 use turso::{Builder, Connection, Database, Value};
 
-use crate::models::{CreateMovie, Movie, UpdateMovie};
+use crate::models::{CreateMovie, Format, Movie, UpdateMovie};
 
 const CREATE_MOVIES_TABLE: &str = r#"
     CREATE TABLE IF NOT EXISTS movies (
@@ -232,7 +232,7 @@ fn row_to_movie(row: &turso::Row) -> Result<Movie, String> {
             _ => false,
         },
         format: match format {
-            Value::Text(t) => t,
+            Value::Text(t) => t.parse::<Format>()?,
             _ => return Err("Invalid format".to_string()),
         },
         tmdb_id: match tmdb_id {
@@ -294,7 +294,7 @@ mod tests {
             director: Some("Andrei Tarkovsky".into()),
             notes: Some("zone".into()),
             is_favorite: true,
-            format: "Blu-ray".into(),
+            format: Format::BluRay,
             release_year: Some(1979),
         }
     }
@@ -312,7 +312,7 @@ mod tests {
         assert_eq!(created.director, "Andrei Tarkovsky");
         assert_eq!(created.notes.as_deref(), Some("zone"));
         assert!(created.is_favorite);
-        assert_eq!(created.format, "Blu-ray");
+        assert_eq!(created.format, Format::BluRay);
         assert_eq!(created.tmdb_id, Some(1398));
         assert_eq!(created.poster_path.as_deref(), Some("posters/1398.jpg"));
         assert_eq!(created.release_year, Some(1979));
@@ -332,7 +332,7 @@ mod tests {
                 director: None,
                 notes: None,
                 is_favorite: false,
-                format: "DVD".into(),
+                format: Format::Dvd,
                 release_year: None,
             },
             None,
@@ -365,7 +365,7 @@ mod tests {
                 director: "Andrei Tarkovsky".into(),
                 notes: None,
                 is_favorite: false,
-                format: "DVD".into(),
+                format: Format::Dvd,
                 release_year: Some(1972),
             },
             Some(423),
@@ -377,7 +377,7 @@ mod tests {
         assert_eq!(updated.title, "Solaris");
         assert_eq!(updated.notes, None);
         assert!(!updated.is_favorite);
-        assert_eq!(updated.format, "DVD");
+        assert_eq!(updated.format, Format::Dvd);
         assert_eq!(updated.release_year, Some(1972));
         assert_eq!(updated.tmdb_id, Some(423));
         assert_eq!(updated.poster_path.as_deref(), Some("posters/423.jpg"));
@@ -397,7 +397,7 @@ mod tests {
                 director: Some("Andrei Tarkovsky".into()),
                 notes: Some("zone".into()),
                 is_favorite: true,
-                format: "Blu-ray".into(),
+                format: Format::BluRay,
                 release_year: None,
             },
             Some(1398),
@@ -479,7 +479,7 @@ mod tests {
                 director: Some("Andrei Tarkovsky".into()),
                 notes: None,
                 is_favorite: false,
-                format: "Digital".into(),
+                format: Format::Digital,
                 release_year: Some(1975),
             },
             None,
@@ -498,5 +498,22 @@ mod tests {
         assert_eq!(remaining.len(), 1);
         assert_eq!(remaining[0].id, b.id);
         assert!(get_movie(&t.conn, a.id).await.is_err(), "deleted row still readable");
+    }
+
+    /// The column has no CHECK constraint, so a bad value written outside the
+    /// app must surface as an error on read rather than reach the frontend.
+    #[tokio::test]
+    async fn unknown_format_in_db_is_an_error_on_read() {
+        let t = temp_db("badformat").await;
+        t.conn
+            .execute(
+                "INSERT INTO movies (title, director, format) VALUES ('Stalker', 'Tarkovsky', 'VHS')",
+                (),
+            )
+            .await
+            .unwrap();
+
+        let err = get_all_movies(&t.conn).await.unwrap_err();
+        assert!(err.contains("VHS"), "unexpected error: {err}");
     }
 }
