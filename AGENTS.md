@@ -28,6 +28,10 @@ pnpm tauri build      # Build Tauri desktop application
 # Preview
 pnpm preview          # Preview production build
 
+# Test (frontend; Vitest + Testing Library + jsdom)
+pnpm test             # run once
+pnpm test:watch       # watch mode
+
 # Test (Rust; run from src-tauri/)
 cargo test            # db layer, hermetic
 cargo test -- --ignored   # + TMDB network tests, needs .env key and internet
@@ -50,6 +54,7 @@ cargo test -- --ignored   # + TMDB network tests, needs .env key and internet
 │   │   ├── tauri.ts        # Typed Tauri invoke wrappers
 │   │   ├── sort.ts         # Sort by date added / release year
 │   │   └── theme.ts        # Theme persistence + apply
+│   ├── test/               # Vitest setup (Tauri invoke mock) + fixtures
 │   ├── App.tsx             # Main app component
 │   ├── App.css             # Global styles + Tailwind CSS
 │   └── main.tsx            # Entry point
@@ -114,3 +119,4 @@ pnpm dlx shadcn@latest add <component-name>
 - Use Tailwind CSS utility classes for styling
 - Import shadcn/ui components from `@/components/ui`
 - Use `cn()` utility from `@/lib/utils` for conditional class merging
+- Frontend tests sit beside source as `*.test.ts(x)`; mock the backend by stubbing `invoke` (see `src/App.test.tsx`)
