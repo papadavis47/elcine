@@ -43,10 +43,13 @@ cargo test -- --ignored   # + TMDB network tests, needs .env key and internet
 │   │   ├── MovieForm.tsx   # Add/edit movie form
 │   │   ├── MovieDialog.tsx # Dialog wrapper for form
 │   │   ├── MovieGrid.tsx   # Responsive movie grid
-│   │   └── SortControls.tsx# Sort/filter controls
+│   │   ├── SortControls.tsx# Sort/filter controls
+│   │   └── ThemeToggle.tsx # Light/dark toggle
 │   ├── lib/
 │   │   ├── utils.ts        # cn() utility from shadcn
-│   │   └── tauri.ts        # Typed Tauri invoke wrappers
+│   │   ├── tauri.ts        # Typed Tauri invoke wrappers
+│   │   ├── sort.ts         # Sort by date added / release year
+│   │   └── theme.ts        # Theme persistence + apply
 │   ├── App.tsx             # Main app component
 │   ├── App.css             # Global styles + Tailwind CSS
 │   └── main.tsx            # Entry point
@@ -73,12 +76,15 @@ CREATE TABLE movies (
   director TEXT NOT NULL,
   notes TEXT,
   is_favorite INTEGER DEFAULT 0,
-  format TEXT CHECK(format IN ('DVD', 'Digital', 'Blu-ray')) NOT NULL,
+  format TEXT NOT NULL,          -- 'DVD' | 'Digital' | 'Blu-ray'; no DB CHECK, enforced by Rust `Format` enum (models.rs)
   tmdb_id INTEGER,
   poster_path TEXT,
-  created_at TEXT DEFAULT (datetime('now'))
+  created_at TEXT DEFAULT (datetime('now')),
+  release_year INTEGER
 );
 ```
+
+Schema lives in `src-tauri/src/db.rs`. Older DBs get `release_year` via an `ALTER TABLE` migration on startup.
 
 ## Data Storage
 
