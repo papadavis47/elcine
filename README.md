@@ -42,7 +42,7 @@ cd src-tauri && cargo test   # backend tests
 
 ## Data
 
-On Linux the database and poster cache live in `~/.local/share/com.papa.elcine/`.
+On Linux the database and poster cache live in `~/.local/share/io.github.papadavis47.elcine/`.
 
 ## License
 

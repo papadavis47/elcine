@@ -35,10 +35,27 @@ const ADD_RELEASE_YEAR: &str = "ALTER TABLE movies ADD COLUMN release_year INTEG
 /// means this migration already ran.
 pub async fn migrate(conn: &Connection) -> Result<(), String> {
     match conn.execute(ADD_RELEASE_YEAR, ()).await {
-        Ok(_) => Ok(()),
-        Err(e) if e.to_string().to_lowercase().contains("duplicate column") => Ok(()),
-        Err(e) => Err(e.to_string()),
+        Ok(_) => {}
+        Err(e) if e.to_string().to_lowercase().contains("duplicate column") => {}
+        Err(e) => return Err(e.to_string()),
     }
+    strip_poster_dirs(conn).await
+}
+
+/// `poster_path` holds just the file name inside the app's `posters/` dir, so
+/// the data folder can move (identifier change, restore on another machine).
+/// Builds before v0.1.2 stored absolute paths; cut those down to the name.
+async fn strip_poster_dirs(conn: &Connection) -> Result<(), String> {
+    for movie in get_all_movies(conn).await? {
+        let Some(path) = movie.poster_path else { continue };
+        let Some(name) = std::path::Path::new(&path).file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if name != path {
+            set_poster_path(conn, movie.id, name).await?;
+        }
+    }
+    Ok(())
 }
 
 pub async fn init_db(app_handle: &AppHandle) -> Result<Database, String> {
@@ -621,5 +638,22 @@ mod tests {
 
         delete_setting(&t.conn, TMDB_API_KEY).await.unwrap();
         assert_eq!(get_setting(&t.conn, TMDB_API_KEY).await.unwrap(), None);
+    }
+
+    #[tokio::test]
+    async fn migrate_strips_poster_dirs() {
+        let t = temp_db("strip").await;
+        let abs = insert_movie(&t.conn, sample(), Some(1), Some("/home/x/.local/share/com.papa.elcine/posters/1-w780.jpg".into()))
+            .await
+            .unwrap();
+        let bare = insert_movie(&t.conn, sample(), Some(2), Some("2-w780.jpg".into())).await.unwrap();
+        let none = insert_movie(&t.conn, sample(), None, None).await.unwrap();
+
+        migrate(&t.conn).await.unwrap();
+        migrate(&t.conn).await.unwrap(); // idempotent
+
+        assert_eq!(get_movie(&t.conn, abs.id).await.unwrap().poster_path.as_deref(), Some("1-w780.jpg"));
+        assert_eq!(get_movie(&t.conn, bare.id).await.unwrap().poster_path.as_deref(), Some("2-w780.jpg"));
+        assert_eq!(get_movie(&t.conn, none.id).await.unwrap().poster_path, None);
     }
 }

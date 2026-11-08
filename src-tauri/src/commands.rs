@@ -48,7 +48,8 @@ pub async fn add_movie(
     };
 
     let conn = state.db.connect().map_err(|e| e.to_string())?;
-    db::insert_movie(&conn, movie_data, tmdb_id, poster_path).await
+    let created = db::insert_movie(&conn, movie_data, tmdb_id, poster_path).await?;
+    with_poster_path(&app_handle, created)
 }
 
 /// Every edit re-resolves the movie against TMDB by its (possibly just-edited)
@@ -84,9 +85,9 @@ pub async fn update_movie(
             }
         }
 
-        if let Some(old_path) = &existing.poster_path {
-            if new_poster_path.as_ref() != Some(old_path) {
-                let _ = std::fs::remove_file(old_path);
+        if let Some(old_name) = &existing.poster_path {
+            if new_poster_path.as_ref() != Some(old_name) {
+                remove_poster(&app_handle, old_name);
             }
         }
         poster_path = new_poster_path;
@@ -98,7 +99,8 @@ pub async fn update_movie(
         ..movie
     };
 
-    db::update_movie(&conn, update_data, tmdb_id, poster_path).await
+    let updated = db::update_movie(&conn, update_data, tmdb_id, poster_path).await?;
+    with_poster_path(&app_handle, updated)
 }
 
 #[tauri::command]
@@ -108,9 +110,13 @@ pub async fn delete_movie(state: State<'_, AppState>, id: i64) -> Result<(), Str
 }
 
 #[tauri::command]
-pub async fn get_movies(state: State<'_, AppState>) -> Result<Vec<Movie>, String> {
+pub async fn get_movies(app_handle: AppHandle, state: State<'_, AppState>) -> Result<Vec<Movie>, String> {
     let conn = state.db.connect().map_err(|e| e.to_string())?;
-    db::get_all_movies(&conn).await
+    db::get_all_movies(&conn)
+        .await?
+        .into_iter()
+        .map(|m| with_poster_path(&app_handle, m))
+        .collect()
 }
 
 /// Fills in `release_year` for movies added before the field existed. Runs on
@@ -161,10 +167,10 @@ pub async fn upgrade_posters(
 
     let mut upgraded = 0;
     for movie in movies {
-        let Some(old_path) = movie.poster_path else {
+        let Some(old_name) = movie.poster_path else {
             continue;
         };
-        if tmdb::is_current_poster(&old_path) {
+        if tmdb::is_current_poster(&old_name) {
             continue;
         }
         let Some(tmdb_id) = movie.tmdb_id else {
@@ -180,7 +186,7 @@ pub async fn upgrade_posters(
             continue;
         };
         db::set_poster_path(&conn, movie.id, &new_path).await?;
-        let _ = std::fs::remove_file(&old_path);
+        remove_poster(&app_handle, &old_name);
         upgraded += 1;
     }
 
@@ -188,9 +194,26 @@ pub async fn upgrade_posters(
 }
 
 #[tauri::command]
-pub async fn get_movie(state: State<'_, AppState>, id: i64) -> Result<Movie, String> {
+pub async fn get_movie(app_handle: AppHandle, state: State<'_, AppState>, id: i64) -> Result<Movie, String> {
     let conn = state.db.connect().map_err(|e| e.to_string())?;
-    db::get_movie(&conn, id).await
+    let movie = db::get_movie(&conn, id).await?;
+    with_poster_path(&app_handle, movie)
+}
+
+/// The DB stores poster file names; the frontend needs a full path for
+/// `convertFileSrc`. Resolve against the current data dir on the way out.
+fn with_poster_path(app_handle: &AppHandle, mut movie: Movie) -> Result<Movie, String> {
+    if let Some(name) = movie.poster_path.take() {
+        let dir = tmdb::posters_dir(app_handle)?;
+        movie.poster_path = Some(dir.join(name).to_string_lossy().to_string());
+    }
+    Ok(movie)
+}
+
+fn remove_poster(app_handle: &AppHandle, name: &str) {
+    if let Ok(dir) = tmdb::posters_dir(app_handle) {
+        let _ = std::fs::remove_file(dir.join(name));
+    }
 }
 
 /// The key to use for TMDB calls: one saved in settings wins over the

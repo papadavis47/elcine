@@ -106,8 +106,8 @@ Schema lives in `src-tauri/src/db.rs`. Older DBs get `release_year` via an `ALTE
 
 ## Data Storage
 
-- **Database**: `~/.local/share/com.papa.elcine/elcine.db` (Linux). Path comes from Tauri's `app_data_dir()`, which uses the bundle **identifier** in `tauri.conf.json`, not `productName`.
-- **Posters**: `~/.local/share/com.papa.elcine/posters/` (cached from TMDB at w780, named `{tmdb_id}-w780.{ext}`; older w342 files are re-downloaded on startup by `upgrade_posters`)
+- **Database**: `~/.local/share/io.github.papadavis47.elcine/elcine.db` (Linux). Path comes from Tauri's `app_data_dir()`, which uses the bundle **identifier** in `tauri.conf.json`, not `productName`. Identifier was `com.papa.elcine` before v0.1.2; old data must be moved by hand (no auto-migration).
+- **Posters**: `~/.local/share/io.github.papadavis47.elcine/posters/` (cached from TMDB at w780, named `{tmdb_id}-w780.{ext}`; DB `poster_path` stores the **file name only**, commands resolve it to a full path for the frontend (`with_poster_path`); pre-v0.1.2 absolute paths are cut down by `db::migrate`; older w342 files are re-downloaded on startup by `upgrade_posters`)
 
 ## TMDB API Key
 

@@ -128,17 +128,23 @@ pub fn is_current_poster(local_path: &str) -> bool {
         .is_some_and(|stem| stem.ends_with(&format!("-{POSTER_SIZE}")))
 }
 
+/// Where cached posters live: `{app_data_dir}/posters`.
+pub fn posters_dir(app_handle: &AppHandle) -> Result<PathBuf, String> {
+    let app_data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    Ok(app_data_dir.join("posters"))
+}
+
+/// Downloads a poster into `posters_dir` and returns its file name (not the
+/// full path; see `db::strip_poster_dirs`).
 pub async fn download_poster(
     app_handle: &AppHandle,
     poster_path: &str,
     tmdb_id: i64,
 ) -> Result<String, String> {
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?;
-
-    let posters_dir = app_data_dir.join("posters");
+    let posters_dir = posters_dir(app_handle)?;
     std::fs::create_dir_all(&posters_dir).map_err(|e| e.to_string())?;
 
     let extension = PathBuf::from(poster_path)
@@ -163,7 +169,7 @@ pub async fn download_poster(
         .map_err(|e| e.to_string())?;
     file.write_all(&bytes).await.map_err(|e| e.to_string())?;
 
-    Ok(local_path.to_string_lossy().to_string())
+    Ok(local_filename)
 }
 
 #[cfg(test)]
