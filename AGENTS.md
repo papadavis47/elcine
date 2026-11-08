@@ -44,6 +44,8 @@ cargo test -- --ignored   # + TMDB network tests, needs .env key and internet
 ├── src/                    # Frontend React source
 │   ├── components/         # React components
 │   │   ├── ui/             # shadcn/ui components
+│   │   ├── Logo.tsx        # Header logo: icon + outlined wordmark
+│   │   ├── wordmark.ts     # Generated wordmark path (docs/brand/build.py)
 │   │   ├── MovieCard.tsx   # Movie display card (hover zoom, click opens detail)
 │   │   ├── MoviePoster.tsx # Poster shared by card + detail (Motion layoutId)
 │   │   ├── MovieDetail.tsx # Centered read-only view, poster flies in
@@ -72,6 +74,7 @@ cargo test -- --ignored   # + TMDB network tests, needs .env key and internet
 │   ├── .env                # TMDB_API_KEY (gitignored)
 │   ├── Cargo.toml          # Rust dependencies
 │   └── tauri.conf.json     # Tauri configuration
+├── docs/brand/             # Logo source: icon SVG/1024 PNG, banners, build.py, fonts/ (OFL)
 └── components.json         # shadcn/ui configuration (Tailwind v4: theme lives in src/App.css)
 ```
 
@@ -105,6 +108,12 @@ The TMDB API key is stored in `src-tauri/.env` (gitignored):
 ```
 TMDB_API_KEY=your_key_here
 ```
+
+## Branding
+
+- Icon: palette "Deep Ocean" (bg `#0f2a3d`, poster `#2f8f9d`, frames `#ffd28a`, bookmark `#ff7a59`); wordmark DM Sans SemiBold, subtitle Noto Sans; both bundled (OFL) in `docs/brand/fonts/`.
+- Rebuild banners + `src/components/wordmark.ts` after font/text changes: `uv run --with fonttools --with uharfbuzz python docs/brand/build.py`.
+- Regenerate app icons: `pnpm tauri icon docs/brand/elcine-icon-1024.png` (delete the generated `android/` and `ios/` dirs).
 
 ## Path Aliases
 

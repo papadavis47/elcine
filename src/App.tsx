@@ -4,6 +4,7 @@ import { MotionConfig } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { MovieGrid } from "@/components/MovieGrid";
 import { MovieDialog } from "@/components/MovieDialog";
+import { Logo } from "@/components/Logo";
 import { SortControls, FormatFilter } from "@/components/SortControls";
 import { SortOption, compareMovies, loadSort, saveSort } from "@/lib/sort";
 import {
@@ -137,7 +138,9 @@ function App() {
       <main className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-[1600px] space-y-6">
           <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <h1 className="text-3xl font-bold tracking-tight">elcine</h1>
+            <h1>
+              <Logo />
+            </h1>
             <MovieDialog
               trigger={<Button>Add Movie</Button>}
               movie={editingMovie}
