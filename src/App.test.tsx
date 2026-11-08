@@ -3,18 +3,21 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { invoke } from "@tauri-apps/api/core";
 import App from "./App";
-import { Movie } from "@/lib/tauri";
+import { Movie, TmdbKeySource } from "@/lib/tauri";
+import { TMDB_PROMPT_DISMISSED } from "@/lib/settings";
 import { movie } from "@/test/fixtures";
 
 const invokeMock = vi.mocked(invoke);
 
 /// Stands in for the Rust command layer, holding rows in memory.
-function backend(initial: Movie[]) {
+function backend(initial: Movie[], keySource: TmdbKeySource = "saved") {
   let rows = [...initial];
   invokeMock.mockImplementation(async (cmd, args) => {
     switch (cmd) {
       case "get_movies":
         return rows;
+      case "get_tmdb_key_status":
+        return { source: keySource };
       case "backfill_release_years":
       case "upgrade_posters":
         return 0;
@@ -75,5 +78,49 @@ describe("App", () => {
     backend([]);
     render(<App />);
     expect(await screen.findByText("Add your first movie to get started")).toBeInTheDocument();
+  });
+});
+
+describe("first-run TMDB prompt", () => {
+  it("opens when no key is configured", async () => {
+    backend([], null);
+    render(<App />);
+    expect(await screen.findByRole("dialog", { name: "Welcome to elcine" })).toBeInTheDocument();
+  });
+
+  it("stays closed once skipped", async () => {
+    const user = userEvent.setup();
+    backend([], null);
+    render(<App />);
+    await user.click(await screen.findByRole("button", { name: "Skip for now" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(localStorage.getItem(TMDB_PROMPT_DISMISSED)).toBe("1");
+  });
+
+  it("does not open after being dismissed before", async () => {
+    localStorage.setItem(TMDB_PROMPT_DISMISSED, "1");
+    backend([], null);
+    render(<App />);
+    await screen.findByText("Add your first movie to get started");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(invokeMock).not.toHaveBeenCalledWith("get_tmdb_key_status");
+  });
+
+  it.each(["saved", "env"] as const)("does not open when a key comes from %s", async (source) => {
+    backend([], source);
+    render(<App />);
+    await waitFor(() => expect(invokeMock).toHaveBeenCalledWith("get_tmdb_key_status"));
+    await screen.findByText("Add your first movie to get started");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("opens settings from the header", async () => {
+    const user = userEvent.setup();
+    backend([]);
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    expect(await screen.findByText("A TMDB key is saved.")).toBeInTheDocument();
   });
 });

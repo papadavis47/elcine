@@ -52,11 +52,13 @@ cargo test -- --ignored   # + TMDB network tests, needs .env key and internet
 │   │   ├── MovieForm.tsx   # Add/edit movie form
 │   │   ├── MovieDialog.tsx # Dialog wrapper for form
 │   │   ├── MovieGrid.tsx   # Responsive grid; scroll fade-in, sort reflow (Motion)
+│   │   ├── SettingsDialog.tsx # TMDB key settings + first-run welcome
 │   │   ├── SortControls.tsx# Sort/filter controls
 │   │   └── ThemeToggle.tsx # Light/dark toggle
 │   ├── lib/
 │   │   ├── utils.ts        # cn() utility from shadcn
 │   │   ├── tauri.ts        # Typed Tauri invoke wrappers
+│   │   ├── settings.ts     # Settings constants (TMDB URL, prompt flag)
 │   │   ├── sort.ts         # Sort by date added / release year
 │   │   └── theme.ts        # Theme persistence + apply
 │   ├── test/               # Vitest setup (Tauri invoke mock) + fixtures
@@ -93,6 +95,11 @@ CREATE TABLE movies (
   created_at TEXT DEFAULT (datetime('now')),
   release_year INTEGER
 );
+
+CREATE TABLE settings (          -- key/value app settings
+  key TEXT PRIMARY KEY,          -- e.g. 'tmdb_api_key'
+  value TEXT NOT NULL
+);
 ```
 
 Schema lives in `src-tauri/src/db.rs`. Older DBs get `release_year` via an `ALTER TABLE` migration on startup.
@@ -102,9 +109,12 @@ Schema lives in `src-tauri/src/db.rs`. Older DBs get `release_year` via an `ALTE
 - **Database**: `~/.local/share/com.papa.elcine/elcine.db` (Linux). Path comes from Tauri's `app_data_dir()`, which uses the bundle **identifier** in `tauri.conf.json`, not `productName`.
 - **Posters**: `~/.local/share/com.papa.elcine/posters/` (cached from TMDB at w780, named `{tmdb_id}-w780.{ext}`; older w342 files are re-downloaded on startup by `upgrade_posters`)
 
-## Environment Variables
+## TMDB API Key
 
-The TMDB API key is stored in `src-tauri/.env` (gitignored):
+Resolved per call by `commands::tmdb_key`: a key saved in the app (Settings dialog, `settings` table, cached in `AppState.tmdb_key`) wins; otherwise `TMDB_API_KEY` from env or `.env` (dev fallback, e.g. `src-tauri/.env`, gitignored). No key: TMDB lookups are skipped silently. `set_tmdb_api_key` validates against TMDB `/configuration` before saving.
+
+First launch with no key opens the Settings dialog in welcome mode once; dismissal is stored in localStorage `elcine.tmdbPromptDismissed`.
+
 ```
 TMDB_API_KEY=your_key_here
 ```

@@ -14,16 +14,22 @@ A desktop app for logging the movies you own. Built with Tauri 2, React 19 and a
 - Posters are cached locally, so the collection works offline
 - Poster grid with a detail view; sort by date added, title, director or release year
 - Filter by format or favorites; light/dark theme
+- TMDB key entered in-app (Settings), prompted on first launch
 
-## Setup
+## Install
+
+Download the `.deb`, `.rpm` or `.AppImage` from [Releases](https://github.com/papadavis47/elcine/releases). On first launch, paste a free [TMDB API key](https://www.themoviedb.org/settings/api) (the "API Key", not the read access token). You can change it later via the gear icon.
+
+## Build from source
 
 Requires Node + pnpm, Rust, and the [Tauri prerequisites](https://tauri.app/start/prerequisites/).
 
 ```bash
 pnpm install
-echo "TMDB_API_KEY=your_key_here" > src-tauri/.env   # free key from themoviedb.org
 pnpm tauri dev
 ```
+
+For development you can skip the prompt by putting `TMDB_API_KEY=...` in `src-tauri/.env`; a key saved in the app takes precedence.
 
 ## Commands
 

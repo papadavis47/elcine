@@ -1,3 +1,4 @@
+use serde::Serialize;
 use tauri::{AppHandle, State};
 
 use crate::db;
@@ -17,7 +18,7 @@ pub async fn add_movie(
     // A year typed into the form wins; TMDB only fills the gap.
     let mut release_year = movie.release_year;
 
-    if let Ok(Some(tmdb_movie)) = tmdb::search_movie(&movie.title).await {
+    if let Some((tmdb_movie, key)) = lookup(&state, &movie.title).await {
         tmdb_id = Some(tmdb_movie.id);
 
         if release_year.is_none() {
@@ -25,7 +26,7 @@ pub async fn add_movie(
         }
 
         if director.is_none() {
-            if let Ok(Some(dir)) = tmdb::get_movie_credits(tmdb_movie.id).await {
+            if let Ok(Some(dir)) = tmdb::get_movie_credits(tmdb_movie.id, &key).await {
                 director = Some(dir);
             }
         }
@@ -68,11 +69,11 @@ pub async fn update_movie(
     let mut release_year = movie.release_year;
     let mut poster_path = existing.poster_path.clone();
 
-    if let Ok(Some(tmdb_movie)) = tmdb::search_movie(&movie.title).await {
+    if let Some((tmdb_movie, key)) = lookup(&state, &movie.title).await {
         tmdb_id = Some(tmdb_movie.id);
         release_year = tmdb::year_from_release_date(tmdb_movie.release_date.as_deref());
 
-        if let Ok(Some(dir)) = tmdb::get_movie_credits(tmdb_movie.id).await {
+        if let Ok(Some(dir)) = tmdb::get_movie_credits(tmdb_movie.id, &key).await {
             director = dir;
         }
 
@@ -117,6 +118,9 @@ pub async fn get_movies(state: State<'_, AppState>) -> Result<Vec<Movie>, String
 /// the next launch. Returns how many rows it filled.
 #[tauri::command]
 pub async fn backfill_release_years(state: State<'_, AppState>) -> Result<usize, String> {
+    let Some(key) = tmdb_key(&state) else {
+        return Ok(0);
+    };
     let conn = state.db.connect().map_err(|e| e.to_string())?;
     let movies = db::get_all_movies(&conn).await?;
 
@@ -128,7 +132,7 @@ pub async fn backfill_release_years(state: State<'_, AppState>) -> Result<usize,
         let Some(tmdb_id) = movie.tmdb_id else {
             continue;
         };
-        let Ok(details) = tmdb::get_movie_details(tmdb_id).await else {
+        let Ok(details) = tmdb::get_movie_details(tmdb_id, &key).await else {
             continue;
         };
         if let Some(year) = tmdb::year_from_release_date(details.release_date.as_deref()) {
@@ -149,6 +153,9 @@ pub async fn upgrade_posters(
     app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<usize, String> {
+    let Some(key) = tmdb_key(&state) else {
+        return Ok(0);
+    };
     let conn = state.db.connect().map_err(|e| e.to_string())?;
     let movies = db::get_all_movies(&conn).await?;
 
@@ -163,7 +170,7 @@ pub async fn upgrade_posters(
         let Some(tmdb_id) = movie.tmdb_id else {
             continue;
         };
-        let Ok(details) = tmdb::get_movie_details(tmdb_id).await else {
+        let Ok(details) = tmdb::get_movie_details(tmdb_id, &key).await else {
             continue;
         };
         let Some(remote_path) = details.poster_path else {
@@ -184,4 +191,71 @@ pub async fn upgrade_posters(
 pub async fn get_movie(state: State<'_, AppState>, id: i64) -> Result<Movie, String> {
     let conn = state.db.connect().map_err(|e| e.to_string())?;
     db::get_movie(&conn, id).await
+}
+
+/// The key to use for TMDB calls: one saved in settings wins over the
+/// `TMDB_API_KEY` env/.env developer fallback. `None` means TMDB is skipped.
+fn tmdb_key(state: &AppState) -> Option<String> {
+    let saved = state.tmdb_key.read().expect("tmdb_key lock poisoned").clone();
+    saved.or_else(tmdb::env_api_key)
+}
+
+/// Title search with whichever key is configured. Returns the key alongside the
+/// match so follow-up calls (credits) use the same one.
+async fn lookup(state: &AppState, title: &str) -> Option<(tmdb::TmdbMovie, String)> {
+    let key = tmdb_key(state)?;
+    let found = tmdb::search_movie(title, &key).await.ok().flatten()?;
+    Some((found, key))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TmdbKeySource {
+    Saved,
+    Env,
+}
+
+#[derive(Serialize)]
+pub struct TmdbKeyStatus {
+    pub source: Option<TmdbKeySource>,
+}
+
+#[tauri::command]
+pub fn get_tmdb_key_status(state: State<'_, AppState>) -> TmdbKeyStatus {
+    let saved = state.tmdb_key.read().expect("tmdb_key lock poisoned").is_some();
+    let source = if saved {
+        Some(TmdbKeySource::Saved)
+    } else if tmdb::env_api_key().is_some() {
+        Some(TmdbKeySource::Env)
+    } else {
+        None
+    };
+    TmdbKeyStatus { source }
+}
+
+/// Checks the key with TMDB before saving, so a typo shows up here rather than
+/// as movies silently missing posters later.
+#[tauri::command]
+pub async fn set_tmdb_api_key(state: State<'_, AppState>, key: String) -> Result<(), String> {
+    let key = key.trim();
+    if key.is_empty() {
+        return Err("Enter an API key.".into());
+    }
+    match tmdb::validate_api_key(key).await {
+        Ok(true) => {}
+        Ok(false) => return Err("TMDB rejected this key. Check it and try again.".into()),
+        Err(e) => return Err(format!("Couldn't reach TMDB to check the key ({e}).")),
+    }
+    let conn = state.db.connect().map_err(|e| e.to_string())?;
+    db::set_setting(&conn, db::TMDB_API_KEY, key).await?;
+    *state.tmdb_key.write().expect("tmdb_key lock poisoned") = Some(key.to_string());
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn clear_tmdb_api_key(state: State<'_, AppState>) -> Result<(), String> {
+    let conn = state.db.connect().map_err(|e| e.to_string())?;
+    db::delete_setting(&conn, db::TMDB_API_KEY).await?;
+    *state.tmdb_key.write().expect("tmdb_key lock poisoned") = None;
+    Ok(())
 }

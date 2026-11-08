@@ -18,6 +18,16 @@ const CREATE_MOVIES_TABLE: &str = r#"
     )
 "#;
 
+const CREATE_SETTINGS_TABLE: &str = r#"
+    CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+    )
+"#;
+
+/// Settings key for a TMDB API key entered in the app.
+pub const TMDB_API_KEY: &str = "tmdb_api_key";
+
 const ADD_RELEASE_YEAR: &str = "ALTER TABLE movies ADD COLUMN release_year INTEGER";
 
 /// Brings a database created by an older build up to the current schema.
@@ -53,9 +63,45 @@ pub async fn init_db(app_handle: &AppHandle) -> Result<Database, String> {
         .await
         .map_err(|e| e.to_string())?;
 
+    conn.execute(CREATE_SETTINGS_TABLE, ())
+        .await
+        .map_err(|e| e.to_string())?;
+
     migrate(&conn).await?;
 
     Ok(db)
+}
+
+pub async fn get_setting(conn: &Connection, key: &str) -> Result<Option<String>, String> {
+    let mut rows = conn
+        .query("SELECT value FROM settings WHERE key = ?1", [key])
+        .await
+        .map_err(|e| e.to_string())?;
+    match rows.next().await.map_err(|e| e.to_string())? {
+        Some(row) => match row.get_value(0).map_err(|e| e.to_string())? {
+            Value::Text(s) => Ok(Some(s)),
+            _ => Ok(None),
+        },
+        None => Ok(None),
+    }
+}
+
+pub async fn set_setting(conn: &Connection, key: &str, value: &str) -> Result<(), String> {
+    conn.execute(
+        "INSERT INTO settings (key, value) VALUES (?1, ?2) \
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        [key, value],
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub async fn delete_setting(conn: &Connection, key: &str) -> Result<(), String> {
+    conn.execute("DELETE FROM settings WHERE key = ?1", [key])
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 pub async fn insert_movie(
@@ -297,6 +343,7 @@ mod tests {
         let db = Builder::new_local(&path).build().await.unwrap();
         let conn = db.connect().unwrap();
         conn.execute(CREATE_MOVIES_TABLE, ()).await.unwrap();
+        conn.execute(CREATE_SETTINGS_TABLE, ()).await.unwrap();
 
         TempDb { _db: db, conn, dir }
     }
@@ -560,5 +607,19 @@ mod tests {
 
         let err = get_all_movies(&t.conn).await.unwrap_err();
         assert!(err.contains("VHS"), "unexpected error: {err}");
+    }
+
+    #[tokio::test]
+    async fn settings_set_overwrite_and_delete() {
+        let t = temp_db("settings").await;
+
+        assert_eq!(get_setting(&t.conn, TMDB_API_KEY).await.unwrap(), None);
+
+        set_setting(&t.conn, TMDB_API_KEY, "first").await.unwrap();
+        set_setting(&t.conn, TMDB_API_KEY, "second").await.unwrap();
+        assert_eq!(get_setting(&t.conn, TMDB_API_KEY).await.unwrap().as_deref(), Some("second"));
+
+        delete_setting(&t.conn, TMDB_API_KEY).await.unwrap();
+        assert_eq!(get_setting(&t.conn, TMDB_API_KEY).await.unwrap(), None);
     }
 }

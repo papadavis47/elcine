@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { MovieGrid } from "@/components/MovieGrid";
 import { MovieDialog } from "@/components/MovieDialog";
 import { Logo } from "@/components/Logo";
+import { SettingsDialog } from "@/components/SettingsDialog";
+import { Settings } from "lucide-react";
+import { TMDB_PROMPT_DISMISSED } from "@/lib/settings";
 import { SortControls, FormatFilter } from "@/components/SortControls";
 import { SortOption, compareMovies, loadSort, saveSort } from "@/lib/sort";
 import {
@@ -17,6 +20,7 @@ import {
   deleteMovie,
   backfillReleaseYears,
   upgradePosters,
+  getTmdbKeyStatus,
 } from "@/lib/tauri";
 
 function App() {
@@ -27,6 +31,8 @@ function App() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMovie, setEditingMovie] = useState<Movie | undefined>();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [firstRun, setFirstRun] = useState(false);
 
   const fetchMovies = async () => {
     try {
@@ -62,6 +68,27 @@ function App() {
       })
       .catch((error) => console.error("Failed to upgrade posters:", error));
   }, []);
+
+  // No TMDB key yet (fresh install): offer to add one, once.
+  useEffect(() => {
+    if (localStorage.getItem(TMDB_PROMPT_DISMISSED)) return;
+    getTmdbKeyStatus()
+      .then(({ source }) => {
+        if (source === null) {
+          setFirstRun(true);
+          setSettingsOpen(true);
+        }
+      })
+      .catch((error) => console.error("Failed to read TMDB key status:", error));
+  }, []);
+
+  const handleSettingsOpenChange = (open: boolean) => {
+    setSettingsOpen(open);
+    if (!open && firstRun) {
+      localStorage.setItem(TMDB_PROMPT_DISMISSED, "1");
+      setFirstRun(false);
+    }
+  };
 
   const handleSortChange = (sort: SortOption) => {
     setSortBy(sort);
@@ -141,14 +168,31 @@ function App() {
             <h1>
               <Logo />
             </h1>
-            <MovieDialog
-              trigger={<Button>Add Movie</Button>}
-              movie={editingMovie}
-              onSave={handleSave}
-              open={dialogOpen}
-              onOpenChange={handleDialogOpenChange}
-            />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Settings"
+                title="Settings"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+              <MovieDialog
+                trigger={<Button>Add Movie</Button>}
+                movie={editingMovie}
+                onSave={handleSave}
+                open={dialogOpen}
+                onOpenChange={handleDialogOpenChange}
+              />
+            </div>
           </header>
+
+          <SettingsDialog
+            open={settingsOpen}
+            onOpenChange={handleSettingsOpenChange}
+            firstRun={firstRun}
+          />
 
           <SortControls
             sortBy={sortBy}

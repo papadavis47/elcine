@@ -34,13 +34,32 @@ pub struct TmdbCrewMember {
     pub name: String,
 }
 
-fn get_api_key() -> Result<String, String> {
+/// Developer fallback: `TMDB_API_KEY` from the environment or a `.env` file.
+/// A key saved in the app's settings takes precedence (see `commands::tmdb_key`).
+pub fn env_api_key() -> Option<String> {
     dotenvy::dotenv().ok();
-    std::env::var("TMDB_API_KEY").map_err(|_| "TMDB_API_KEY not found in environment".to_string())
+    std::env::var("TMDB_API_KEY")
+        .ok()
+        .map(|k| k.trim().to_string())
+        .filter(|k| !k.is_empty())
 }
 
-pub async fn search_movie(title: &str) -> Result<Option<TmdbMovie>, String> {
-    let api_key = get_api_key()?;
+/// Asks TMDB whether `api_key` is valid. `Ok(false)` means TMDB rejected it;
+/// `Err` means we couldn't find out (offline, TMDB down).
+pub async fn validate_api_key(api_key: &str) -> Result<bool, String> {
+    let url = format!(
+        "https://api.themoviedb.org/3/configuration?api_key={}",
+        urlencoding::encode(api_key)
+    );
+    let status = reqwest::get(&url).await.map_err(|e| e.to_string())?.status();
+    match status.as_u16() {
+        200..=299 => Ok(true),
+        401 => Ok(false),
+        code => Err(format!("TMDB returned HTTP {code}")),
+    }
+}
+
+pub async fn search_movie(title: &str, api_key: &str) -> Result<Option<TmdbMovie>, String> {
     let url = format!(
         "https://api.themoviedb.org/3/search/movie?api_key={}&query={}",
         api_key,
@@ -57,8 +76,7 @@ pub async fn search_movie(title: &str) -> Result<Option<TmdbMovie>, String> {
     Ok(response.results.into_iter().next())
 }
 
-pub async fn get_movie_credits(tmdb_id: i64) -> Result<Option<String>, String> {
-    let api_key = get_api_key()?;
+pub async fn get_movie_credits(tmdb_id: i64, api_key: &str) -> Result<Option<String>, String> {
     let url = format!(
         "https://api.themoviedb.org/3/movie/{}/credits?api_key={}",
         tmdb_id, api_key
@@ -82,8 +100,7 @@ pub async fn get_movie_credits(tmdb_id: i64) -> Result<Option<String>, String> {
 
 /// Looks a film up by its TMDB id rather than its title. The backfill already
 /// knows the id, so it must not go back through the fuzzy title search.
-pub async fn get_movie_details(tmdb_id: i64) -> Result<TmdbMovie, String> {
-    let api_key = get_api_key()?;
+pub async fn get_movie_details(tmdb_id: i64, api_key: &str) -> Result<TmdbMovie, String> {
     let url = format!(
         "https://api.themoviedb.org/3/movie/{}?api_key={}",
         tmdb_id, api_key
@@ -220,7 +237,11 @@ mod network_tests {
     #[tokio::test]
     #[ignore = "hits the network, needs TMDB_API_KEY"]
     async fn search_then_credits() {
-        let movie = search_movie("Stalker")
+        let key = env_api_key().expect("TMDB_API_KEY not set");
+        assert!(validate_api_key(&key).await.expect("validate failed"));
+        assert!(!validate_api_key("invalid").await.expect("validate failed"));
+
+        let movie = search_movie("Stalker", &key)
             .await
             .expect("search_movie failed")
             .expect("no results for 'Stalker'");
@@ -228,7 +249,7 @@ mod network_tests {
         assert!(movie.id > 0);
         assert!(!movie.title.is_empty());
 
-        let director = get_movie_credits(movie.id)
+        let director = get_movie_credits(movie.id, &key)
             .await
             .expect("get_movie_credits failed");
 

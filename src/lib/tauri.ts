@@ -68,3 +68,19 @@ export function getPosterSrc(posterPath: string | null): string | null {
   if (!posterPath) return null;
   return convertFileSrc(posterPath);
 }
+
+/** Where the TMDB key in use comes from; `null` means none is set. */
+export type TmdbKeySource = "saved" | "env" | null;
+
+export async function getTmdbKeyStatus(): Promise<{ source: TmdbKeySource }> {
+  return invoke("get_tmdb_key_status");
+}
+
+/** Validates the key with TMDB, then saves it. Rejects with a readable message. */
+export async function setTmdbApiKey(key: string): Promise<void> {
+  return invoke("set_tmdb_api_key", { key });
+}
+
+export async function clearTmdbApiKey(): Promise<void> {
+  return invoke("clear_tmdb_api_key");
+}
