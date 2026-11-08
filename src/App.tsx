@@ -135,7 +135,7 @@ function App() {
     // "user": honour the OS reduce-motion setting (fades only, no movement).
     <MotionConfig reducedMotion="user">
       <main className="min-h-screen bg-background p-6">
-        <div className="mx-auto max-w-7xl space-y-6">
+        <div className="mx-auto max-w-[1600px] space-y-6">
           <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-3xl font-bold tracking-tight">elcine</h1>
             <MovieDialog
