@@ -16,9 +16,9 @@ A desktop app for logging the movies you own. Built with Tauri 2, React 19 and a
 - Filter by format or favorites; light/dark theme
 - TMDB key entered in-app (Settings), prompted on first launch
 
-## Install
+## TMDB key
 
-Download the `.deb`, `.rpm` or `.AppImage` from [Releases](https://github.com/papadavis47/elcine/releases). On first launch, paste a free [TMDB API key](https://www.themoviedb.org/settings/api) (the "API Key", not the read access token). You can change it later via the gear icon.
+On first launch, elcine asks for a free [TMDB API key](https://www.themoviedb.org/settings/api) (the "API Key", not the read access token). You can change it later via the gear icon. Prebuilt Linux packages are planned for a later release.
 
 ## Build from source
 
