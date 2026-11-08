@@ -38,6 +38,10 @@ cd src-tauri && cargo test   # backend tests
 
 On Linux the database and poster cache live in `~/.local/share/com.papa.elcine/`.
 
+## License
+
+[MIT](LICENSE). Bundled fonts in `docs/brand/fonts/` are under the SIL Open Font License (see the OFL files there).
+
 ---
 
 This product uses the TMDB API but is not endorsed or certified by TMDB.
