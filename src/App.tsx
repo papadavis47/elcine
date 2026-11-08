@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import { MotionConfig } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { MovieGrid } from "@/components/MovieGrid";
 import { MovieDialog } from "@/components/MovieDialog";
@@ -120,65 +121,68 @@ function App() {
     .sort((a, b) => compareMovies(a, b, sortBy));
 
   return (
-    <main className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">elcine</h1>
-          <MovieDialog
-            trigger={<Button>Add Movie</Button>}
-            movie={editingMovie}
-            onSave={handleSave}
-            open={dialogOpen}
-            onOpenChange={handleDialogOpenChange}
-          />
-        </header>
+    // "user": honour the OS reduce-motion setting (fades only, no movement).
+    <MotionConfig reducedMotion="user">
+      <main className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-3xl font-bold tracking-tight">elcine</h1>
+            <MovieDialog
+              trigger={<Button>Add Movie</Button>}
+              movie={editingMovie}
+              onSave={handleSave}
+              open={dialogOpen}
+              onOpenChange={handleDialogOpenChange}
+            />
+          </header>
 
-        <SortControls
-          sortBy={sortBy}
-          onSortChange={handleSortChange}
-          filterFormat={filterFormat}
-          onFilterFormatChange={setFilterFormat}
-          favoritesOnly={favoritesOnly}
-          onFavoritesOnlyChange={setFavoritesOnly}
-        />
-
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-muted-foreground">Loading movies...</div>
-          </div>
-        ) : filteredAndSortedMovies.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="mb-4 text-muted-foreground"
-            >
-              <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
-              <rect x="2" y="6" width="14" height="12" rx="2" />
-            </svg>
-            <h2 className="text-lg font-medium">No movies found</h2>
-            <p className="text-muted-foreground">
-              {movies.length === 0
-                ? "Add your first movie to get started"
-                : "Try adjusting your filters"}
-            </p>
-          </div>
-        ) : (
-          <MovieGrid
-            movies={filteredAndSortedMovies}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+          <SortControls
+            sortBy={sortBy}
+            onSortChange={handleSortChange}
+            filterFormat={filterFormat}
+            onFilterFormatChange={setFilterFormat}
+            favoritesOnly={favoritesOnly}
+            onFavoritesOnlyChange={setFavoritesOnly}
           />
-        )}
-      </div>
-    </main>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-muted-foreground">Loading movies...</div>
+            </div>
+          ) : filteredAndSortedMovies.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="mb-4 text-muted-foreground"
+              >
+                <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
+                <rect x="2" y="6" width="14" height="12" rx="2" />
+              </svg>
+              <h2 className="text-lg font-medium">No movies found</h2>
+              <p className="text-muted-foreground">
+                {movies.length === 0
+                  ? "Add your first movie to get started"
+                  : "Try adjusting your filters"}
+              </p>
+            </div>
+          ) : (
+            <MovieGrid
+              movies={filteredAndSortedMovies}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          )}
+        </div>
+      </main>
+    </MotionConfig>
   );
 }
 

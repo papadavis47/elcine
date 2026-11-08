@@ -8,6 +8,7 @@
 
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4
 - **UI Components**: shadcn/ui (New York style)
+- **Animation**: Motion (`motion/react`); `MotionConfig reducedMotion="user"` in App
 - **Build Tool**: Vite 8
 - **Desktop Runtime**: Tauri 2
 - **Database**: Turso (embedded SQLite-compatible, local only)
@@ -43,10 +44,12 @@ cargo test -- --ignored   # + TMDB network tests, needs .env key and internet
 ├── src/                    # Frontend React source
 │   ├── components/         # React components
 │   │   ├── ui/             # shadcn/ui components
-│   │   ├── MovieCard.tsx   # Movie display card
+│   │   ├── MovieCard.tsx   # Movie display card (hover zoom, click opens detail)
+│   │   ├── MoviePoster.tsx # Poster shared by card + detail (Motion layoutId)
+│   │   ├── MovieDetail.tsx # Centered read-only view, poster flies in
 │   │   ├── MovieForm.tsx   # Add/edit movie form
 │   │   ├── MovieDialog.tsx # Dialog wrapper for form
-│   │   ├── MovieGrid.tsx   # Responsive movie grid
+│   │   ├── MovieGrid.tsx   # Responsive grid; scroll fade-in, sort reflow (Motion)
 │   │   ├── SortControls.tsx# Sort/filter controls
 │   │   └── ThemeToggle.tsx # Light/dark toggle
 │   ├── lib/
