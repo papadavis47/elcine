@@ -159,6 +159,19 @@ pub async fn set_release_year(conn: &Connection, id: i64, year: i64) -> Result<(
     Ok(())
 }
 
+/// Used by the poster upgrade, which swaps in a re-downloaded file and must
+/// leave the rest of the row alone.
+pub async fn set_poster_path(conn: &Connection, id: i64, poster_path: &str) -> Result<(), String> {
+    let id_str = id.to_string();
+    conn.execute(
+        "UPDATE movies SET poster_path = ?1 WHERE id = ?2",
+        [poster_path, id_str.as_str()],
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 pub async fn delete_movie(conn: &Connection, id: i64) -> Result<(), String> {
     let id_str = id.to_string();
     conn.execute("DELETE FROM movies WHERE id = ?1", [id_str.as_str()])
@@ -418,6 +431,38 @@ mod tests {
         assert!(after.is_favorite);
         assert_eq!(after.tmdb_id, Some(1398));
         assert_eq!(after.poster_path.as_deref(), Some("posters/1398.jpg"));
+    }
+
+    #[tokio::test]
+    async fn set_poster_path_changes_only_that_column() {
+        let t = temp_db("poster").await;
+
+        let created = insert_movie(
+            &t.conn,
+            CreateMovie {
+                title: "Stalker".into(),
+                director: Some("Andrei Tarkovsky".into()),
+                notes: Some("zone".into()),
+                is_favorite: true,
+                format: Format::BluRay,
+                release_year: Some(1979),
+            },
+            Some(1398),
+            Some("posters/1398.jpg".into()),
+        )
+        .await
+        .unwrap();
+
+        set_poster_path(&t.conn, created.id, "posters/1398-w780.jpg")
+            .await
+            .expect("set_poster_path failed");
+
+        let after = get_movie(&t.conn, created.id).await.unwrap();
+        assert_eq!(after.poster_path.as_deref(), Some("posters/1398-w780.jpg"));
+        assert_eq!(after.title, "Stalker");
+        assert_eq!(after.notes.as_deref(), Some("zone"));
+        assert_eq!(after.release_year, Some(1979));
+        assert_eq!(after.tmdb_id, Some(1398));
     }
 
     /// A database written by a build that predates `release_year` has to gain

@@ -59,6 +59,11 @@ export async function backfillReleaseYears(): Promise<number> {
   return invoke("backfill_release_years");
 }
 
+/** Re-downloads posters cached at an older, smaller size. Returns how many. */
+export async function upgradePosters(): Promise<number> {
+  return invoke("upgrade_posters");
+}
+
 export function getPosterSrc(posterPath: string | null): string | null {
   if (!posterPath) return null;
   return convertFileSrc(posterPath);

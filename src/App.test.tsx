@@ -16,6 +16,7 @@ function backend(initial: Movie[]) {
       case "get_movies":
         return rows;
       case "backfill_release_years":
+      case "upgrade_posters":
         return 0;
       case "delete_movie":
         rows = rows.filter((m) => m.id !== (args as { id: number }).id);
@@ -40,6 +41,7 @@ describe("App", () => {
     render(<App />);
     await waitFor(() => expect(titles()).toEqual(["Alien", "Mirror"]));
     expect(invokeMock).toHaveBeenCalledWith("backfill_release_years");
+    expect(invokeMock).toHaveBeenCalledWith("upgrade_posters");
   });
 
   it("uses the saved sort", async () => {

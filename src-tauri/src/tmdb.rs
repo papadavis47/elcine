@@ -97,6 +97,20 @@ pub async fn get_movie_details(tmdb_id: i64) -> Result<TmdbMovie, String> {
         .map_err(|e| e.to_string())
 }
 
+/// TMDB image width cached locally. Big enough for the centered detail view;
+/// the grid just scales it down.
+pub const POSTER_SIZE: &str = "w780";
+
+/// Cached posters are named `{tmdb_id}-{size}.{ext}`. Anything else (the old
+/// `{tmdb_id}.{ext}` files were w342) predates the current size and gets
+/// re-downloaded by the poster upgrade.
+pub fn is_current_poster(local_path: &str) -> bool {
+    PathBuf::from(local_path)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .is_some_and(|stem| stem.ends_with(&format!("-{POSTER_SIZE}")))
+}
+
 pub async fn download_poster(
     app_handle: &AppHandle,
     poster_path: &str,
@@ -116,12 +130,15 @@ pub async fn download_poster(
         .unwrap_or("jpg")
         .to_string();
 
-    let local_filename = format!("{}.{}", tmdb_id, extension);
+    let local_filename = format!("{tmdb_id}-{POSTER_SIZE}.{extension}");
     let local_path = posters_dir.join(&local_filename);
 
-    let url = format!("https://image.tmdb.org/t/p/w342{}", poster_path);
+    let url = format!("https://image.tmdb.org/t/p/{POSTER_SIZE}{poster_path}");
 
-    let response = reqwest::get(&url).await.map_err(|e| e.to_string())?;
+    let response = reqwest::get(&url)
+        .await
+        .and_then(|r| r.error_for_status())
+        .map_err(|e| e.to_string())?;
     let bytes = response.bytes().await.map_err(|e| e.to_string())?;
 
     let mut file = tokio::fs::File::create(&local_path)
@@ -144,6 +161,14 @@ mod tests {
         assert_eq!(year_from_release_date(Some("")), None);
         assert_eq!(year_from_release_date(Some("197")), None);
         assert_eq!(year_from_release_date(Some("not-a-date")), None);
+    }
+
+    #[test]
+    fn current_poster_is_recognised_by_size_suffix() {
+        assert!(is_current_poster("/data/posters/1398-w780.jpg"));
+        assert!(!is_current_poster("/data/posters/1398.jpg"));
+        assert!(!is_current_poster("/data/posters/1398-w342.jpg"));
+        assert!(!is_current_poster(""));
     }
 }
 
@@ -181,7 +206,7 @@ mod network_tests {
         );
 
         // The byte path used by download_poster.
-        let img = reqwest::get("https://image.tmdb.org/t/p/w342/qJ2tW6WMUDux911r6m7haRef0WH.jpg")
+        let img = reqwest::get("https://image.tmdb.org/t/p/w780/qJ2tW6WMUDux911r6m7haRef0WH.jpg")
             .await
             .expect("TLS handshake / request to image.tmdb.org failed");
         assert!(img.status().is_success(), "image CDN returned {}", img.status());

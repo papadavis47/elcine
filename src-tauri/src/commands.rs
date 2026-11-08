@@ -140,6 +140,46 @@ pub async fn backfill_release_years(state: State<'_, AppState>) -> Result<usize,
     Ok(filled)
 }
 
+/// Re-downloads posters cached at an older size (see `tmdb::POSTER_SIZE`).
+/// Runs on app start like the release-year backfill; a poster that fails to
+/// download keeps its old file and is retried next launch. Returns how many
+/// posters it replaced.
+#[tauri::command]
+pub async fn upgrade_posters(
+    app_handle: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<usize, String> {
+    let conn = state.db.connect().map_err(|e| e.to_string())?;
+    let movies = db::get_all_movies(&conn).await?;
+
+    let mut upgraded = 0;
+    for movie in movies {
+        let Some(old_path) = movie.poster_path else {
+            continue;
+        };
+        if tmdb::is_current_poster(&old_path) {
+            continue;
+        }
+        let Some(tmdb_id) = movie.tmdb_id else {
+            continue;
+        };
+        let Ok(details) = tmdb::get_movie_details(tmdb_id).await else {
+            continue;
+        };
+        let Some(remote_path) = details.poster_path else {
+            continue;
+        };
+        let Ok(new_path) = tmdb::download_poster(&app_handle, &remote_path, tmdb_id).await else {
+            continue;
+        };
+        db::set_poster_path(&conn, movie.id, &new_path).await?;
+        let _ = std::fs::remove_file(&old_path);
+        upgraded += 1;
+    }
+
+    Ok(upgraded)
+}
+
 #[tauri::command]
 pub async fn get_movie(state: State<'_, AppState>, id: i64) -> Result<Movie, String> {
     let conn = state.db.connect().map_err(|e| e.to_string())?;

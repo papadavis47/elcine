@@ -97,7 +97,7 @@ Schema lives in `src-tauri/src/db.rs`. Older DBs get `release_year` via an `ALTE
 ## Data Storage
 
 - **Database**: `~/.local/share/com.papa.elcine/elcine.db` (Linux). Path comes from Tauri's `app_data_dir()`, which uses the bundle **identifier** in `tauri.conf.json`, not `productName`.
-- **Posters**: `~/.local/share/com.papa.elcine/posters/` (cached from TMDB at w342 size)
+- **Posters**: `~/.local/share/com.papa.elcine/posters/` (cached from TMDB at w780, named `{tmdb_id}-w780.{ext}`; older w342 files are re-downloaded on startup by `upgrade_posters`)
 
 ## Environment Variables
 

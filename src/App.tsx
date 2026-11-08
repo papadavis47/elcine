@@ -15,6 +15,7 @@ import {
   updateMovie,
   deleteMovie,
   backfillReleaseYears,
+  upgradePosters,
 } from "@/lib/tauri";
 
 function App() {
@@ -49,6 +50,16 @@ function App() {
         if (filled > 0) fetchMovies();
       })
       .catch((error) => console.error("Failed to backfill release years:", error));
+  }, []);
+
+  // Posters cached before the switch to w780 look soft in the detail view.
+  // Swap them for the bigger size once per launch; failures retry next run.
+  useEffect(() => {
+    upgradePosters()
+      .then((upgraded) => {
+        if (upgraded > 0) fetchMovies();
+      })
+      .catch((error) => console.error("Failed to upgrade posters:", error));
   }, []);
 
   const handleSortChange = (sort: SortOption) => {

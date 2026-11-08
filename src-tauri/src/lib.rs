@@ -30,6 +30,7 @@ pub fn run() {
             commands::get_movies,
             commands::get_movie,
             commands::backfill_release_years,
+            commands::upgrade_posters,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
