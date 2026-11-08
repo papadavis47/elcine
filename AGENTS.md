@@ -113,6 +113,7 @@ TMDB_API_KEY=your_key_here
 
 - Icon: palette "Deep Ocean" (bg `#0f2a3d`, poster `#2f8f9d`, frames `#ffd28a`, bookmark `#ff7a59`); wordmark DM Sans SemiBold, subtitle Noto Sans; both bundled (OFL) in `docs/brand/fonts/`.
 - Rebuild banners + `src/components/wordmark.ts` after font/text changes: `uv run --with fonttools --with uharfbuzz python docs/brand/build.py`.
+- Social preview: `docs/brand/elcine-social.png` (1280x640), made from the build.py SVG via `inkscape docs/brand/elcine-social.svg -w 1280 -h 640 -o docs/brand/elcine-social.png`; upload manually in GitHub Settings (no API).
 - Regenerate app icons: `pnpm tauri icon docs/brand/elcine-icon-1024.png` (delete the generated `android/` and `ios/` dirs).
 
 ## Path Aliases

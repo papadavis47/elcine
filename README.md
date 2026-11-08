@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-A desktop app for logging the movies I own. Built with Tauri 2, React 19 and an embedded Turso database. Everything stays local.
+A desktop app for logging the movies you own. Built with Tauri 2, React 19 and an embedded Turso database. Everything stays local.
 
 ## Features
 

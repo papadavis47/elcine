@@ -5,6 +5,7 @@ Run from repo root:
 
 Writes:
     docs/brand/elcine-banner-{light,dark}.svg   README banners
+    docs/brand/elcine-social.svg                GitHub social preview (render PNG with inkscape)
     src/components/wordmark.ts                  header wordmark path data
 """
 
@@ -60,7 +61,8 @@ def icon_body():
     return svg[svg.index(">") + 1 : svg.rindex("</svg>")]
 
 
-def banner(color):
+def lockup(color):
+    """Icon + name + subtitle. Returns (svg body, width, height)."""
     # proportions match the approved mock: icon 96, name 66, subtitle 14 (x2)
     icon, gap, pad = 192, 44, 48
     name_size, sub_size = 132, 28
@@ -72,11 +74,41 @@ def banner(color):
     sub_d, sub_w, _ = outline(SUBTITLE, "YOUR FILM COLLECTION", sub_size, 0.2, tx + 2, sub_base)
     width = round(tx + max(name_w, sub_w) + pad)
     height = icon + 2 * pad
-    scale = icon / 512
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="elcine, your film collection">
-<g transform="translate({pad} {pad}) scale({scale})">{icon_body()}</g>
-<path fill="{color}" d="{name_d}"/>
-<path fill="{color}" fill-opacity=".6" d="{sub_d}"/>
+    body = (
+        f'<g transform="translate({pad} {pad}) scale({icon / 512})">{icon_body()}</g>\n'
+        f'<path fill="{color}" d="{name_d}"/>\n'
+        f'<path fill="{color}" fill-opacity=".6" d="{sub_d}"/>'
+    )
+    return body, width, height
+
+
+def banner(color):
+    body, w, h = lockup(color)
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" role="img" aria-label="elcine, your film collection">
+{body}
+</svg>
+"""
+
+
+def social():
+    """1280x640 GitHub social preview."""
+    W, H, ink = 1280, 640, "#f3efe6"
+    body, w, h = lockup(ink)
+    k = 1.3
+    x, y = (W - w * k) / 2, (H - h * k) / 2 - 30
+    foot = "TAURI 2 \u00b7 REACT \u00b7 TURSO \u00b7 TMDB"
+    _, fw, _ = outline(SUBTITLE, foot, 22, 0.16)
+    foot_d, _, _ = outline(SUBTITLE, foot, 22, 0.16, (W - fw) / 2, H - 72)
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">
+<defs><radialGradient id="glow" cx=".5" cy=".42" r=".7"><stop offset="0" stop-color="#173a52"/><stop offset="1" stop-color="#08131c"/></radialGradient>
+<filter id="lift" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#000" flood-opacity=".45"/></filter></defs>
+<rect width="{W}" height="{H}" fill="url(#glow)"/>
+<g transform="translate({x:.1f} {y:.1f}) scale({k})">
+<rect x="48" y="48" width="192" height="192" rx="42" fill="#0f2a3d" filter="url(#lift)"/>
+{body}
+<rect x="48.5" y="48.5" width="191" height="191" rx="42" fill="none" stroke="#ffffff" stroke-opacity=".14"/>
+</g>
+<path fill="{ink}" fill-opacity=".45" d="{foot_d}"/>
 </svg>
 """
 
@@ -95,5 +127,6 @@ def wordmark_ts():
 if __name__ == "__main__":
     (BRAND / "elcine-banner-light.svg").write_text(banner("#1b1a17"))
     (BRAND / "elcine-banner-dark.svg").write_text(banner("#f3efe6"))
+    (BRAND / "elcine-social.svg").write_text(social())
     (ROOT / "src/components/wordmark.ts").write_text(wordmark_ts())
     print("ok")
