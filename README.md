@@ -5,6 +5,39 @@
   </picture>
 </p>
 
-A place to log my movie collection.
+A desktop app for logging the movies I own. Built with Tauri 2, React 19 and an embedded Turso database. Everything stays local.
 
-Testing out Tauri and **amp code**
+## Features
+
+- Add movies with title, format (DVD / Digital / Blu-ray), notes and a favorite flag
+- Director, release year and poster are filled in automatically from [TMDB](https://www.themoviedb.org/)
+- Posters are cached locally, so the collection works offline
+- Poster grid with a detail view; sort by date added, title, director or release year
+- Filter by format or favorites; light/dark theme
+
+## Setup
+
+Requires Node + pnpm, Rust, and the [Tauri prerequisites](https://tauri.app/start/prerequisites/).
+
+```bash
+pnpm install
+echo "TMDB_API_KEY=your_key_here" > src-tauri/.env   # free key from themoviedb.org
+pnpm tauri dev
+```
+
+## Commands
+
+```bash
+pnpm tauri dev      # run the app
+pnpm tauri build    # build a desktop bundle
+pnpm test           # frontend tests (Vitest)
+cd src-tauri && cargo test   # backend tests
+```
+
+## Data
+
+On Linux the database and poster cache live in `~/.local/share/com.papa.elcine/`.
+
+---
+
+This product uses the TMDB API but is not endorsed or certified by TMDB.
