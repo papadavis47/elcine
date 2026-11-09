@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, Deserialize)]
@@ -128,13 +128,9 @@ pub fn is_current_poster(local_path: &str) -> bool {
         .is_some_and(|stem| stem.ends_with(&format!("-{POSTER_SIZE}")))
 }
 
-/// Where cached posters live: `{app_data_dir}/posters`.
+/// Where cached posters live: `{data_dir}/posters`.
 pub fn posters_dir(app_handle: &AppHandle) -> Result<PathBuf, String> {
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?;
-    Ok(app_data_dir.join("posters"))
+    Ok(crate::data_dir(app_handle)?.join("posters"))
 }
 
 /// Downloads a poster into `posters_dir` and returns its file name (not the

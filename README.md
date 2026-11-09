@@ -31,6 +31,13 @@ pnpm install
 pnpm tauri dev
 ```
 
+Install as a desktop app (Debian/Ubuntu/Pop!_OS): adds `elcine` to your PATH and app launcher.
+
+```bash
+pnpm tauri build --bundles deb
+sudo apt install ./src-tauri/target/release/bundle/deb/elcine_*_amd64.deb
+```
+
 For development you can skip the prompt by putting `TMDB_API_KEY=...` in `src-tauri/.env`; a key saved in the app takes precedence.
 
 ## Commands
@@ -44,7 +51,7 @@ cd src-tauri && cargo test   # backend tests
 
 ## Data
 
-On Linux the database and poster cache live in `~/.local/share/io.github.papadavis47.elcine/`.
+On Linux the database and poster cache live in `~/.local/share/io.github.papadavis47.elcine/`. Dev builds (`pnpm tauri dev`) use the `dev/` subfolder, so they never touch your installed collection.
 
 ## License
 

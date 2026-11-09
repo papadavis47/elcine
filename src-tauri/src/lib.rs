@@ -3,14 +3,22 @@ mod db;
 mod models;
 mod tmdb;
 
+use std::path::PathBuf;
 use std::sync::RwLock;
 use turso::Database;
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 
 pub struct AppState {
     pub db: Database,
     /// TMDB key saved in settings, cached so lookups don't hit the DB.
     pub tmdb_key: RwLock<Option<String>>,
+}
+
+/// App data root (DB + posters). Debug builds (`pnpm tauri dev`) use a `dev/`
+/// subdir so they never touch the installed release build's collection.
+pub fn data_dir(app_handle: &AppHandle) -> Result<PathBuf, String> {
+    let dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(if cfg!(debug_assertions) { dir.join("dev") } else { dir })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

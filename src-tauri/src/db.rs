@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use turso::{Builder, Connection, Database, Value};
 
 use crate::models::{CreateMovie, Format, Movie, UpdateMovie};
@@ -59,10 +59,7 @@ async fn strip_poster_dirs(conn: &Connection) -> Result<(), String> {
 }
 
 pub async fn init_db(app_handle: &AppHandle) -> Result<Database, String> {
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?;
+    let app_data_dir = crate::data_dir(app_handle)?;
 
     std::fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
 
