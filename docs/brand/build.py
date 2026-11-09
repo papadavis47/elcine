@@ -4,7 +4,8 @@ Run from repo root:
     uv run --with fonttools --with uharfbuzz python docs/brand/build.py
 
 Writes:
-    docs/brand/elcine-banner-{light,dark}.svg   README banners
+    docs/brand/elcine-banner-{light,dark}.svg          banners, padded (general use)
+    docs/brand/elcine-banner-{light,dark}-readme.svg   README banners, no left pad
     docs/brand/elcine-social.svg                GitHub social preview (render PNG with inkscape)
     src/components/wordmark.ts                  header wordmark path data
 """
@@ -82,9 +83,12 @@ def lockup(color):
     return body, width, height
 
 
-def banner(color):
+def banner(color, flush=False):
     body, w, h = lockup(color)
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" role="img" aria-label="elcine, your film collection">
+    # flush: crop the lockup's left pad so the icon lines up with README text
+    x0 = 48 if flush else 0
+    w -= x0
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="{x0} 0 {w} {h}" role="img" aria-label="elcine, your film collection">
 {body}
 </svg>
 """
@@ -127,6 +131,8 @@ def wordmark_ts():
 if __name__ == "__main__":
     (BRAND / "elcine-banner-light.svg").write_text(banner("#1b1a17"))
     (BRAND / "elcine-banner-dark.svg").write_text(banner("#f3efe6"))
+    (BRAND / "elcine-banner-light-readme.svg").write_text(banner("#1b1a17", flush=True))
+    (BRAND / "elcine-banner-dark-readme.svg").write_text(banner("#f3efe6", flush=True))
     (BRAND / "elcine-social.svg").write_text(social())
     (ROOT / "src/components/wordmark.ts").write_text(wordmark_ts())
     print("ok")

@@ -1,7 +1,7 @@
-<p align="center">
+<p>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/elcine-banner-dark.svg">
-    <img alt="elcine — your film collection" src="docs/brand/elcine-banner-light.svg" width="480">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/elcine-banner-dark-readme.svg">
+    <img alt="elcine — your film collection" src="docs/brand/elcine-banner-light-readme.svg" width="480">
   </picture>
 </p>
 
