@@ -40,7 +40,7 @@ export function MovieDetail({ movie, onClose, onEdit }: MovieDetailProps) {
               onClick={(e) => e.target === e.currentTarget && onClose()}
               className="fixed inset-0 z-50 flex items-center justify-center p-6 focus:outline-none"
             >
-              <div className="flex max-h-full w-full max-w-6xl flex-col items-center justify-center gap-8 md:flex-row">
+              <div className="flex max-h-full w-full max-w-6xl flex-col items-center justify-center gap-8 md:flex-row md:items-start">
                 {/* Sized by height to use the window; the vw cap keeps width
                     (2/3 of height) at most half the window, leaving room for
                     the panel. */}
@@ -50,7 +50,7 @@ export function MovieDetail({ movie, onClose, onEdit }: MovieDetailProps) {
                   className="aspect-2/3 h-[min(50vh,32rem)] w-auto shrink-0 shadow-2xl md:h-[min(85vh,56rem,75vw)]"
                 />
                 <motion.div
-                  className="relative flex max-h-[40vh] w-full min-w-0 max-w-xl flex-col md:max-h-[85vh] md:flex-1 gap-4 overflow-y-auto rounded-xl border bg-card p-6 text-card-foreground shadow-2xl"
+                  className="relative flex max-h-[40vh] w-full min-w-0 max-w-xl flex-col md:mt-6 md:max-h-[calc(85vh-1.5rem)] md:flex-1 gap-4 overflow-y-auto rounded-xl border bg-card p-6 text-card-foreground shadow-2xl"
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease, delay: 0.15 } }}
                   exit={{ opacity: 0, y: 8, transition: { duration: 0.15 } }}
