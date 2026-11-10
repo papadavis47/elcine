@@ -9,6 +9,11 @@ A desktop app for logging the movies you own.
 
 Built with Tauri 2, React 19 and an embedded Turso database. Everything stays local.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/grid-dark.webp">
+  <img alt="elcine poster grid" src="docs/screenshots/grid-light.webp">
+</picture>
+
 ## Features
 
 - Add movies with title, format (DVD / Digital / Blu-ray), notes and a favorite flag
