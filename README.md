@@ -62,6 +62,8 @@ On Linux the database and poster cache live in `~/.local/share/io.github.papadav
 
 [MIT](LICENSE). Bundled fonts in `docs/brand/fonts/` are under the SIL Open Font License (see the OFL files there).
 
+Movie poster images (in the screenshots and those fetched from TMDB) are the property of their respective copyright holders and are shown for illustration only; they are not covered by the MIT license.
+
 ---
 
 This product uses the TMDB API but is not endorsed or certified by TMDB.
