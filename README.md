@@ -5,6 +5,8 @@
   </picture>
 </p>
 
+> **Pronunciation:** *el SEE-neh* (/el ˈsi.ne/), like the Spanish *el cine*, "the cinema".
+
 A desktop app for logging the movies you own. 
 
 Built with Tauri 2, React 19 and an embedded Turso database. Everything stays local.
