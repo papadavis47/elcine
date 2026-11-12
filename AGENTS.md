@@ -26,6 +26,7 @@ pnpm tauri dev        # Start Tauri development (frontend + Rust backend)
 pnpm build            # TypeScript check + Vite production build
 pnpm tauri build      # Build Tauri desktop application
 pnpm tauri build --bundles deb   # .deb only; install: sudo apt install ./src-tauri/target/release/bundle/deb/elcine_*_amd64.deb
+pnpm tauri build --bundles appimage   # AppImage only; run: ./src-tauri/target/release/bundle/appimage/elcine_*_amd64.AppImage
 pnpm tauri build --bundles deb,appimage   # release assets (bundle/deb/, bundle/appimage/); upload to GitHub release
 
 # Preview
