@@ -74,6 +74,8 @@ For development you can skip the prompt by putting `TMDB_API_KEY=...` in `src-ta
 ```bash
 pnpm tauri dev      # run the app
 pnpm tauri build    # build a desktop bundle
+pnpm tauri build --bundles deb        # .deb only
+pnpm tauri build --bundles appimage   # AppImage only
 pnpm test           # frontend tests (Vitest)
 cd src-tauri && cargo test   # backend tests
 ```
