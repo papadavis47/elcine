@@ -27,7 +27,14 @@ Built with Tauri 2, React 19 and an embedded Turso database. Everything stays lo
 
 ## TMDB key
 
-On first launch, elcine asks for a free [TMDB API key](https://www.themoviedb.org/settings/api) (the "API Key", not the read access token). You can change it later via the gear icon. Prebuilt Linux packages are planned for a later release.
+On first launch, elcine asks for a free [TMDB API key](https://www.themoviedb.org/settings/api) (the "API Key", not the read access token). You can change it later via the gear icon.
+
+## Install (Linux)
+
+Download from [Releases](https://github.com/papadavis47/elcine/releases/latest):
+
+- **Debian/Ubuntu/Pop!_OS:** `sudo apt install ./elcine_*_amd64.deb` (adds `elcine` to PATH and app launcher)
+- **Other distros:** AppImage: `chmod +x elcine_*_amd64.AppImage && ./elcine_*_amd64.AppImage`
 
 ## Build from source
 
