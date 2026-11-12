@@ -36,6 +36,14 @@ Download from [Releases](https://github.com/papadavis47/elcine/releases/latest):
 - **Debian/Ubuntu/Pop!_OS:** `sudo apt install ./elcine_*_amd64.deb` (adds `elcine` to PATH and app launcher)
 - **Other distros:** AppImage: `chmod +x elcine_*_amd64.AppImage && ./elcine_*_amd64.AppImage`
 
+Optional: verify the download. Grab `SHA256SUMS` from the same release, put it in the same folder, then run:
+
+```bash
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+Should print `OK` for your file.
+
 ## Build from source
 
 Requires Node + pnpm, Rust, and the [Tauri prerequisites](https://tauri.app/start/prerequisites/).
