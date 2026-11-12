@@ -40,6 +40,20 @@ cargo test            # db layer, hermetic
 cargo test -- --ignored   # + TMDB network tests, needs .env key and internet
 ```
 
+## Release
+
+Bump version in `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`; commit, tag `vX.Y.Z`, push. Then:
+
+```bash
+pnpm tauri build --bundles deb,appimage
+B=src-tauri/target/release/bundle; V=X.Y.Z
+(cd $B/deb && sha256sum elcine_${V}_amd64.deb; cd ../appimage && sha256sum elcine_${V}_amd64.AppImage) > $B/SHA256SUMS
+gh release create v$V --title "elcine v$V" --notes-file notes.md --latest \
+  $B/deb/elcine_${V}_amd64.deb $B/appimage/elcine_${V}_amd64.AppImage $B/SHA256SUMS
+```
+
+`SHA256SUMS` lands in gitignored `target/`; keep `notes.md` out of the repo too. Notes sections: Added / Changed / Verify download / Getting started.
+
 ## Project Structure
 
 ```
