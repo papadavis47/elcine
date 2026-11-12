@@ -60,6 +60,13 @@ pnpm tauri build --bundles deb
 sudo apt install ./src-tauri/target/release/bundle/deb/elcine_*_amd64.deb
 ```
 
+Other distros: build an AppImage and run it.
+
+```bash
+pnpm tauri build --bundles appimage
+./src-tauri/target/release/bundle/appimage/elcine_*_amd64.AppImage
+```
+
 For development you can skip the prompt by putting `TMDB_API_KEY=...` in `src-tauri/.env`; a key saved in the app takes precedence.
 
 ## Commands
